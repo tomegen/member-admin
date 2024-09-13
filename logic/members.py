@@ -3,43 +3,31 @@ import pandas as pd
 from logic.member import Member
 
 class Members:
-    SECOND_NAME = "Name"
-    FIRST_NAME = "Vorname"
-    STREET = "Strasse"
-    PLZ = "Plz"
-    ORT = "Ort"
-    BIRTHDAY = "Geburtstag"
-    PHONE = "Telefon"
-    MOBILE_PHONE = "Mobil"
-    MEMBER_SINCE = "Mitglied seit"
-    IBAN = "IBAN"
-    REFERENCE = "Mandatreferenz"
-    MEMBER = 'Mitglied'
 
-    def __init__(self, filename):
+    def __init__(self, filename, config):
 
         self.members = []
         self.filename = filename
         self.sheet = pd.read_excel(filename, sheet_name=0)
 
-        second_names = self.sheet[self.SECOND_NAME]
-        first_names = self.sheet[self.FIRST_NAME]
-        streets = self.sheet[self.STREET]
-        plzs = self.sheet[self.PLZ]
-        orte = self.sheet[self.ORT]
-        birthdays = self.sheet[self.BIRTHDAY]
-        phones = self.sheet[self.PHONE]
-        mobile_phones = self.sheet[self.MOBILE_PHONE]
-        members_since = self.sheet[self.MEMBER_SINCE]
-        ibans = self.sheet[self.IBAN]
-        references = self.sheet[self.REFERENCE]
-        member_status = self.sheet[self.MEMBER]
+        last_names = self.sheet[config.last_name_config]
+        first_names = self.sheet[config.first_name_config]
+        streets = self.sheet[config.street_config]
+        plzs = self.sheet[config.plz_config]
+        orte = self.sheet[config.ort_config]
+        birthdays = self.sheet[config.birthdays_config]
+        phones = self.sheet[config.phone_config]
+        mobile_phones = self.sheet[config.mobile_phone_config]
+        members_since = self.sheet[config.member_since_config]
+        ibans = self.sheet[config.iban_config]
+        references = self.sheet[config.reference_config]
+        member_status = self.sheet[config.member_config]
 
-        for i in range(len(second_names)):
-            self.members.append(Member(last_name=second_names[i], first_name=first_names[i], street = streets[i],
-                                     plz=plzs[i], ort=orte[i], birthday=pd.to_datetime(birthdays[i]), phone_number=phones[i],
-                                     mobile_phone=mobile_phones[i], member_since=pd.to_datetime(members_since[i]), iban=ibans[i],
-                                     reference=references[i], member=member_status[i]))
+        for i in range(len(last_names)):
+            self.members.append(Member(last_name=str(last_names[i]), first_name=str(first_names[i]), street = str(streets[i]),
+                                     plz=str(plzs[i]), ort=str(orte[i]), birthday=pd.to_datetime(birthdays[i]), phone_number=str(phones[i]),
+                                     mobile_phone=str(mobile_phones[i]), member_since=pd.to_datetime(members_since[i]),
+                                     iban=str(ibans[i]), reference=str(references[i]), member=member_status[i]))
 
 
     def calculate_members(self):
@@ -59,3 +47,10 @@ class Members:
 
         print("New member count: " + str(member_count))
         return member_count
+
+    def calculate_birthday_members(self, birthdays, from_date, to_date):
+        members = []
+
+        for b in birthdays:
+            print(b)
+
