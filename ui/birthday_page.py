@@ -3,7 +3,7 @@ import pandas as pd
 from tkcalendar import DateEntry
 from customtkinter import filedialog as fd
 from tkinter import messagebox as mb
-from logic.birthday_calculation import write_birthdays_into_txt
+from logic.birthday_calculation import write_birthdays_into_txt, write_birthdays_into_ics
 
 
 class BirthdayPage(ctk.CTkFrame):
@@ -55,6 +55,12 @@ class BirthdayPage(ctk.CTkFrame):
                                                                                    to_date=pd.to_datetime(str(self.end_date.get_date()))))
         generate_txt_file_button.pack()
 
+        generate_ics_file_button = ctk.CTkButton(self, text="Erstelle Kalender (ics) Datei",
+                                     command=lambda: self.create_ics_birthday_file(from_date=pd.to_datetime(str(self.start_date.get_date())),
+                                                                                   to_date=pd.to_datetime(str(self.end_date.get_date()))))
+
+        generate_ics_file_button.pack()
+
         # show start button
         start_button = ctk.CTkButton(self, text="Startseite",
                            command=lambda: controller.show_frame("StartPage"))
@@ -77,3 +83,21 @@ class BirthdayPage(ctk.CTkFrame):
 
         else:
             print("Filename was not chosen: " + txt_filename)
+
+
+
+    def create_ics_birthday_file(self, from_date, to_date):
+        ics_filename = fd.asksaveasfilename(defaultextension=".ics", filetypes=[("Calendar Files", "*.ics"), ("All Files", "*.*")])
+        checked_birthdays = []
+        if ics_filename:
+            for i, button in enumerate(self.birthday_buttons):
+                if button.get():
+                    checked_birthdays.append(self.controller.config.birthday_config[i])
+
+            if write_birthdays_into_ics(members=self.controller.members.members, birthdays=checked_birthdays,
+                                        from_date=from_date, to_date=to_date, ics_filename=ics_filename):
+                # Show that creation was successful
+                mb.showinfo("Datei erfolgreich erstellt", "Die Datei " + ics_filename + " wurde erfolgreich erstellt.")
+
+        else:
+            print("Filename was not chosen: " + ics_filename)

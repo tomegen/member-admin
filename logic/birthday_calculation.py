@@ -1,8 +1,40 @@
 import pandas as pd
 import os
+from icalendar import Calendar, Event
+from datetime import timedelta
+
+
+def write_birthdays_into_ics(members, birthdays, from_date, to_date, ics_filename):
+    # Create a new calendar
+    cal = Calendar()
+
+    for birthday in birthdays:
+        print("Process birthday: " + str(birthday))
+        for member in members:
+            if is_birthday(member, birthday, from_date, to_date):
+                # Create an event
+                event = Event()
+                event.add('summary', value=str(birthday) + ". Geburtstag " + member.first_name + " " + member.last_name)
+                event.add('dtstart', pd.Timestamp(year=member.birthday.year + birthday, month=member.birthday.month,
+                                                  day=member.birthday.day))
+                event.add('dtend', pd.Timestamp(year=member.birthday.year + birthday, month=member.birthday.month,
+                                                  day=member.birthday.day) + timedelta(days=1))
+                event.add('location', '')
+                event.add('description', str(birthday) + '. Geburtstag von ' + member.first_name + " " + member.last_name)
+                # Add the event to the calendar
+                cal.add_component(event)
+
+
+    # calculate all the possibilities
+    # Write the text to the selected file
+    with open(ics_filename, "wb") as file:
+        file.write(cal.to_ical())
+
+    return True
+
 
 def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filename):
-    text = "Geburtstage vom " + str(from_date.strftime('%d.%m.%Y')) + " bis zum " + str(from_date.strftime('%d.%m.%Y'))
+    text = "Geburtstage vom " + str(from_date.strftime('%d.%m.%Y')) + " bis zum " + str(to_date.strftime('%d.%m.%Y'))
     text += os.linesep *2
 
     for birthday in birthdays:
@@ -20,8 +52,6 @@ def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filenam
         file.write(text)
 
     return True
-
-
 
 def is_birthday(member, birthday, from_date, to_date):
     if member.member == 0:
@@ -65,8 +95,5 @@ def print_member(member, text):
             text += member.street + os.linesep
 
     text += os.linesep*2
-
-
-
 
     return text
