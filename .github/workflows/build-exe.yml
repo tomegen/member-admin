@@ -1,4 +1,4 @@
-name: Build EXE
+name: Build EXE and Create Release
 
 on:
   workflow_dispatch:
@@ -7,30 +7,62 @@ jobs:
 
   build:
     runs-on: windows-latest
-
+    
     steps:
     - uses: actions/checkout@v3
-
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-
+        
+    - name: Get version
+      id: get_version
+      run: |
+        import os
+        version = os.environ.get('GITHUB_REF_NAME', '0.0.1')
+        print(f'::set-output name=version::{version}')
+      shell: python
+        
     - name: Build executable
       run: |
-        pyinstaller --onefile main.py
-
+        pyinstaller --onefile mitgliederverwaltung.py
+        
+    - name: Create executable folder
+      run: |
+        mkdir executable
+        copy config.ini executable
+        copy README.md executable
+        copy dist\mitgliederverwaltung.exe executable\mitgliederverwaltung_${{ steps.get_version.outputs.version }}.exe
+        
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: executable
-        path: dist/mitgliederverwaltung.exe
-
-    - name: Copy config file into executable folder
-      run: |
-        copy config.ini dist\
+        name: executable-${{ steps.get_version.outputs.version }}
+        path: executable/
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./executable/mitgliederverwaltung_${{ steps.get_version.outputs.version }}.exe
+        asset_name: mitgliederverwaltung_${{ steps.get_version.outputs.version }}.exe
+        asset_content_type: application/vnd.microsoft.portable-executable
