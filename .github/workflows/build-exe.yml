@@ -2,17 +2,17 @@ name: Build EXE and Create Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag/Version name'
+        required: true
+        type: string
 
 jobs:
 
   build:
     runs-on: windows-latest
 
-    inputs:
-      version:
-          description: 'Tag/Version name'
-          required: true
-          type: string
     
     steps:
     - uses: actions/checkout@v3
