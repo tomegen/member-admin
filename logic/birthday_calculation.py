@@ -43,7 +43,7 @@ def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filenam
         text += os.linesep
         for member in members:
             if is_birthday(member, birthday, from_date, to_date):
-                text = print_member(member, text)
+                text = member.print(text)
         text += os.linesep*3
 
     # calculate all the possibilities

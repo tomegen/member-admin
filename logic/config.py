@@ -8,6 +8,7 @@ class Config:
 
         # set values:
         self.birthday_config = [int(num) for num in config.get("birthday", "possibilities").split(",")]
+        self.honor_config = [int(num) for num in config.get("honor", "possibilities").split(",")]
         self.last_name_config = config.get("excel_columns", "last_name")
         self.first_name_config = config.get("excel_columns", "first_name")
         self.birthdays_config = config.get("excel_columns", "birthday")

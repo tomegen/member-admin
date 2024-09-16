@@ -9,17 +9,21 @@ class StartPage(ctk.CTkFrame):
 
         # Current members
         member_count = "Aktuelle Mitglieder: " + str(controller.members.calculate_members())
-        label = ctk.CTkLabel(self, text=member_count)
-        label.pack(side="top", fill="x", pady=10)
+        label = ctk.CTkLabel(self, text=member_count, font=("Arial", 20, "bold"), text_color="#ffffff")
+        label.pack(side="top", fill="x")
 
         # New members
         new_member_count = "Neue Mitglieder in diesem Kalenderjahr: " + str(controller.members.calculate_new_members())
-        label = ctk.CTkLabel(self, text=new_member_count)
-        label.pack(side="top", fill="x", pady=10)
+        label = ctk.CTkLabel(self, text=new_member_count, font=("Arial", 20, "bold"), text_color="#ffffff")
+        label.pack(side="top", fill="x")
 
 
 
-        button = ctk.CTkButton(self, text="Geburtstage",
+        birthday_button = ctk.CTkButton(self, text="Geburtstage",
                            command=lambda: controller.show_frame("BirthdayPage"))
-        button.pack()
+        birthday_button.pack()
+
+        honor_button = ctk.CTkButton(self, text="Ehrungen",
+                                        command=lambda: controller.show_frame("HonorPage"))
+        honor_button.pack()
 

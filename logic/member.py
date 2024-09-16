@@ -1,5 +1,5 @@
-from datetime import datetime
-
+import os
+import pandas as pd
 
 class Member:
     last_name = ""
@@ -7,10 +7,10 @@ class Member:
     street = ""
     plz = ""
     ort = ""
-    birthday = ""
+    birthday = pd.Timestamp.now()
     phone_number = ""
     mobile_phone = ""
-    member_since = ""
+    member_since = pd.Timestamp.now()
     iban = ""
     reference = ""
     member = 0
@@ -58,3 +58,42 @@ class Member:
 
         if self.reference == "nan":
             self.reference = ""
+
+    def print(self, text):
+        text += self.first_name + " " + self.last_name + os.linesep
+        if str(self.birthday) != "NaT":
+            text += "Geburtstag: " + str(self.birthday.strftime('%d.%m.%Y')) + os.linesep
+        if str(self.member_since) != "NaT":
+            text += "Mitglied seit: " + str(self.member_since.strftime('%d.%m.%Y')) + os.linesep
+
+        if self.phone_number or self.mobile_phone:
+            text += "Nummer: "
+            if self.phone_number:
+                text += self.phone_number
+                if self.mobile_phone:
+                    text += " / " + self.mobile_phone
+
+            else:
+                text += self.mobile_phone
+
+            text += os.linesep
+
+        # Anschrift
+        if self.plz or self.ort or self.street:
+            text += "Anschrift: " + os.linesep
+            if self.plz:
+                text += self.plz
+                if self.ort:
+                    text += " " + self.ort
+                text += os.linesep
+
+            else:
+                if self.ort:
+                    text += self.ort + os.linesep
+
+            if self.street:
+                text += self.street + os.linesep
+
+        text += os.linesep * 2
+
+        return text

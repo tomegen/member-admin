@@ -41,6 +41,7 @@ class BirthdayPage(ctk.CTkFrame):
         self.birthday_buttons = []
         for birthday_config in controller.config.birthday_config:
             checkbox_value = ctk.BooleanVar()
+            checkbox_value.set(True)
             check_box = ctk.CTkCheckBox(scrollable_frame, text=str(birthday_config) + ". Geburtstag",
                                         onvalue=True,
                                         offvalue=False,

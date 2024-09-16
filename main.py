@@ -1,17 +1,15 @@
 import customtkinter as ctk
 from customtkinter import filedialog as fd
-
 from logic.config import Config
 from logic.members import Members
 from ui.birthday_page import BirthdayPage
 from ui.honor_page import HonorPage
 from ui.start_page import StartPage
 
-
 class MemberAdminApp(ctk.CTk):
 
     ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("dark-blue")
+    ctk.set_default_color_theme("blue")
 
     def __init__(self, f):
         self.filename = filename
@@ -21,22 +19,24 @@ class MemberAdminApp(ctk.CTk):
         ctk.CTk.__init__(self)
 
         # Adjust general settings for the CTk
-        self.geometry("800x800")
+        self.geometry("700x700")
         self.title("Mitglieder Management Portal")
-
-        # General Page overview including title
-        title = ctk.CTkLabel(self, text="Mitglieder Management Portal")
-        title.pack(pady=20)
 
         # the container is where we'll stack a bunch of frames
         # on top of each other, then the one we want visible
         # will be raised above the others
-        container = ctk.CTkFrame(self)
-        container.pack(side="top", fill="both", expand=True)
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
+        container = ctk.CTkFrame(self, width=700, height=700, corner_radius=10,bg_color="#1a1a1a",
+                                 fg_color="#2a2a2a", border_color="#4a4a4a", border_width=2)
 
 
+        container.place_configure(
+            x=0,
+            y=0,
+            relwidth=1,
+            relheight=1
+        )
+
+        container.pack(expand=True)
 
         # Frame Switcher
         self.frames = {}

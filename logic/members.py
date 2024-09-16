@@ -30,6 +30,8 @@ class Members:
                                      iban=str(ibans[i]), reference=str(references[i]), member=member_status[i]))
 
 
+#TODO: improve validations, so that it`s not possible to have empty birthday or memberSince/lastName/firstName
+
     def calculate_members(self):
         member_count = 0
         for x in self.members:
@@ -47,10 +49,4 @@ class Members:
 
         print("New member count: " + str(member_count))
         return member_count
-
-    def calculate_birthday_members(self, birthdays, from_date, to_date):
-        members = []
-
-        for b in birthdays:
-            print(b)
 
