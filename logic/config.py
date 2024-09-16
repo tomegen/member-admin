@@ -3,6 +3,7 @@ import configparser
 class Config:
     CONFIG_NAME = "config.ini"
     def __init__(self):
+
         config = configparser.ConfigParser()
         config.read(self.CONFIG_NAME)
 

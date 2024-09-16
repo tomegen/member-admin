@@ -19,36 +19,22 @@ class MemberAdminApp(ctk.CTk):
         ctk.CTk.__init__(self)
 
         # Adjust general settings for the CTk
-        self.geometry("700x700")
+        self.geometry("800x700")
         self.title("Mitglieder Management Portal")
-
-        # the container is where we'll stack a bunch of frames
-        # on top of each other, then the one we want visible
-        # will be raised above the others
-        container = ctk.CTkFrame(self, width=700, height=700, corner_radius=10,bg_color="#1a1a1a",
-                                 fg_color="#2a2a2a", border_color="#4a4a4a", border_width=2)
-
-
-        container.place_configure(
-            x=0,
-            y=0,
-            relwidth=1,
-            relheight=1
-        )
-
-        container.pack(expand=True)
 
         # Frame Switcher
         self.frames = {}
         for F in (StartPage, BirthdayPage, HonorPage):
             page_name = F.__name__
-            frame = F(parent=container, controller=self)
+            frame = F(parent=self, controller=self)
             self.frames[page_name] = frame
 
             # put all of the pages in the same location;
             # the one on the top of the stacking order
             # will be the one that is visible.
             frame.grid(row=0, column=0, sticky="nsew")
+            self.grid_rowconfigure(0, weight=1)
+            self.grid_columnconfigure(0, weight=1)
 
         self.show_frame("StartPage")
 
