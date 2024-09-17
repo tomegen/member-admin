@@ -37,14 +37,15 @@ jobs:
         mkdir executable
         copy config.ini executable
         copy README.md executable
+        copy Release_Notes.md executable
         copy dist\mitgliederverwaltung.exe executable\mitgliederverwaltung_${{ inputs.version }}.exe
-        dir executable
-        
+        Compress-Archive -Path ./executable -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
+
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: executable-${{ inputs.version }}
-        path: executable/
+        name: mitgliederverwaltung_${{ inputs.version }}
+        path: ./
         
     - name: Create Release
       id: create_release
@@ -57,42 +58,12 @@ jobs:
         draft: false
         prerelease: false
         
-    - name: Upload Executable
+    - name: Upload zip file
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./executable/mitgliederverwaltung_${{ inputs.version }}.exe
-        asset_name: mitgliederverwaltung_${{ inputs.version }}.exe
-        asset_content_type: application/vnd.microsoft.portable-executable
-
-    - name: Upload README
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./executable/README.md
-        asset_name: README.md
-        asset_content_type: text/markdown
-
-    - name: Upload Release Notes
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./executable/Release_Notes.md
-        asset_name: Release_Notes.md
-        asset_content_type: text/markdown
-
-    - name: Upload config file
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./executable/config.ini
-        asset_name: config.ini
-        asset_content_type: text/plain
+        asset_path: ./mitgliederverwaltung_${{ inputs.version }}.zip
+        asset_name: mitgliederverwaltung_${{ inputs.version }}.zip
+        asset_content_type: application/zip
