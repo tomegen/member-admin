@@ -77,6 +77,16 @@ jobs:
         asset_name: README.md
         asset_content_type: text/markdown
 
+    - name: Upload Release Notes
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./executable/Release_Notes.md
+        asset_name: Release_Notes.md
+        asset_content_type: text/markdown
+
     - name: Upload config file
       uses: actions/upload-release-asset@v1
       env:
