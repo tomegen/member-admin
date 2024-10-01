@@ -29,11 +29,10 @@ jobs:
         pip install configparser
         pip install customtkinter
         pip install datetime
-        pip install os
         pip install icalendar
         pip install pandas
         pip install tkcalendar
-        pip install tkinter
+        pip install tk
         
         
     - name: Build executable
