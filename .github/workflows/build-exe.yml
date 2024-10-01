@@ -43,7 +43,13 @@ jobs:
       run: |
         mkdir executable
         dir
-        copy dist\mitgliederverwaltung executable
+        cd dist
+        dir
+        cd ..
+        cd build
+        dir
+        cd ..
+        xcopy dist\mitgliederverwaltung executable
         copy config.ini executable\mitgliederverwaltung
         copy README.md executable\mitgliederverwaltung
         copy Release_Notes.md executable\mitgliederverwaltung
