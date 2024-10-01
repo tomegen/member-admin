@@ -41,10 +41,10 @@ jobs:
         
     - name: Create executable folder
       run: |
-        copy config.ini dist\mitgliederverwaltung
-        copy README.md dist\mitgliederverwaltung
-        copy Release_Notes.md dist\mitgliederverwaltung
-        copy example_file.xlsx dist\mitgliederverwaltung
+        copy config.ini dist\mitgliederverwaltung\
+        copy README.md dist\mitgliederverwaltung\
+        copy Release_Notes.md dist\mitgliederverwaltung\
+        copy example_file.xlsx dist\mitgliederverwaltung\
         cd dist
         dir
         Compress-Archive -Path ./mitgliederverwaltung -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
