@@ -30,7 +30,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile mitgliederverwaltung.py
+        pyinstaller --onefile --windowed --hidden-import=customtkinter --icon member.ico mitgliederverwaltung.py
         
     - name: Create executable folder
       run: |
@@ -38,6 +38,7 @@ jobs:
         copy config.ini executable
         copy README.md executable
         copy Release_Notes.md executable
+        copy example_file.xlsx executable
         copy dist\mitgliederverwaltung.exe executable\mitgliederverwaltung_${{ inputs.version }}.exe
         Compress-Archive -Path ./executable -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
 

@@ -1,4 +1,11 @@
 
+# Version 0.0.3
+Release Date: 01.10.2024 <br/><br>
+
+Bug Fix für Windows .exe Datei: Es war nicht möglich das "customtkinter" Modul einzubinden.<br>
+Icon für Desktop-Symbol hinzugefügt. <br>
+Beispiels-Excel-Datei hinzugefügt für neue Mitgliederlisten. <br>
+
 
 # Version 0.0.2
 Release Date: 17.09.2024 <br/><br>
