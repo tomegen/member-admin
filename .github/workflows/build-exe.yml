@@ -30,7 +30,7 @@ jobs:
         
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --hidden-import=customtkinter --icon member.ico mitgliederverwaltung.py
+        pyinstaller --onefile --windowed --additional-hooks-dir=hooks --icon member.ico mitgliederverwaltung.py
         
     - name: Create executable folder
       run: |
