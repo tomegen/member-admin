@@ -42,12 +42,14 @@ jobs:
     - name: Create executable folder
       run: |
         mkdir executable
+        dir
         copy dist\mitgliederverwaltung executable
         copy config.ini executable\mitgliederverwaltung
         copy README.md executable\mitgliederverwaltung
         copy Release_Notes.md executable\mitgliederverwaltung
         copy example_file.xlsx executable\mitgliederverwaltung
         cd executable
+        dir
         Compress-Archive -Path ./mitgliederverwaltung -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
 
     - name: Upload artifact
