@@ -41,20 +41,11 @@ jobs:
         
     - name: Create executable folder
       run: |
-        mkdir executable
-        dir
+        copy config.ini dist\mitgliederverwaltung
+        copy README.md dist\mitgliederverwaltung
+        copy Release_Notes.md dist\mitgliederverwaltung
+        copy example_file.xlsx dist\mitgliederverwaltung
         cd dist
-        dir
-        cd ..
-        cd build
-        dir
-        cd ..
-        xcopy dist\mitgliederverwaltung executable
-        copy config.ini executable\mitgliederverwaltung
-        copy README.md executable\mitgliederverwaltung
-        copy Release_Notes.md executable\mitgliederverwaltung
-        copy example_file.xlsx executable\mitgliederverwaltung
-        cd executable
         dir
         Compress-Archive -Path ./mitgliederverwaltung -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
 
@@ -81,6 +72,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./executable\mitgliederverwaltung_${{ inputs.version }}.zip
+        asset_path: ./dist\mitgliederverwaltung_${{ inputs.version }}.zip
         asset_name: mitgliederverwaltung_${{ inputs.version }}.zip
         asset_content_type: application/zip
