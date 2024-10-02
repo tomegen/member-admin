@@ -46,7 +46,7 @@ jobs:
         copy README.md mitgliederverwaltung
         copy Release_Notes.md mitgliederverwaltung
         copy example_file.xlsx mitgliederverwaltung
-        copy dist\* mitgliederverwaltung\
+        copy dist\mitgliederverwaltung mitgliederverwaltung
         dir
         Compress-Archive -Path ./mitgliederverwaltung -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
 
