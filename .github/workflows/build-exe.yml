@@ -37,18 +37,14 @@ jobs:
     - name: Build executable
       run: |
         python build.py
-        dir
-        
+
     - name: Create executable folder
       run: |
-        mkdir mitgliederverwaltung
-        copy config.ini mitgliederverwaltung
-        copy README.md mitgliederverwaltung
-        copy Release_Notes.md mitgliederverwaltung
-        copy example_file.xlsx mitgliederverwaltung
-        copy dist\mitgliederverwaltung mitgliederverwaltung
-        dir
-        Compress-Archive -Path ./mitgliederverwaltung -DestinationPath mitgliederverwaltung_${{ inputs.version }}.zip
+        copy config.ini dist\mitgliederverwaltung
+        copy README.md dist\mitgliederverwaltung
+        copy Release_Notes.md dist\mitgliederverwaltung
+        copy example_file.xlsx dist\mitgliederverwaltung
+        Compress-Archive -Path ./dist/mitgliederverwaltung -DestinationPath ./mitgliederverwaltung_${{ inputs.version }}.zip
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
