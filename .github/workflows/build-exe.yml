@@ -34,6 +34,7 @@ jobs:
         pip install tk
         pip install xlrd
         pip install babel
+        pip install openpyxl
         
         
     - name: Build executable
