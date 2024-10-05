@@ -32,6 +32,7 @@ jobs:
         pip install pandas
         pip install tkcalendar
         pip install tk
+        pip install xlrd
         
         
     - name: Build executable
