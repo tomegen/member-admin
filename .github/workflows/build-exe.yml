@@ -33,6 +33,7 @@ jobs:
         pip install tkcalendar
         pip install tk
         pip install xlrd
+        pip install babel
         
         
     - name: Build executable
