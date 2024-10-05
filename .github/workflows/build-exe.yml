@@ -38,6 +38,7 @@ jobs:
     - name: Build executable
       run: |
         python build.py
+        dir
 
     - name: Create executable folder
       run: |
