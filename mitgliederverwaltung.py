@@ -1,66 +1,57 @@
-import customtkinter as ctk
-from customtkinter import filedialog as fd
-from tkinter import messagebox as mb
-from config.config import Config
-from model.members import Members
-from ui.birthday_page import BirthdayPage
-from ui.honor_page import HonorPage
-from ui.start_page import StartPage
+import os
+import sys
+import tempfile
 
-class MemberAdminApp(ctk.CTk):
+from PySide6.QtCore import QCoreApplication, QTimer
+from PySide6.QtWidgets import QApplication, QMessageBox
 
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("blue")
+from config.config import Config, ConfigError
+from ui.main_window import MainWindow
+from ui.theme import apply_theme
 
-    def __init__(self, f):
-        self.filename = f
-        self.config = Config()
-        self.members = Members(self.filename, self.config)
 
-        ctk.CTk.__init__(self)
+# used by the build: load the file and write every export once, to find missing modules in the packaged app
+def smoke_test(window, path):
+    window.show_error = lambda title, text: print(title + ": " + text, file=sys.stderr)  # no dialog that blocks
+    if not window.load_file(path):
+        return False
+    with tempfile.TemporaryDirectory() as folder:
+        for page, kinds in ((window.birthdays, ("txt", "xlsx", "ics")), (window.honors, ("txt", "xlsx"))):
+            for kind in kinds:
+                target = os.path.join(folder, page.spec.file_stem + "." + kind)
+                page.write(kind, target)
+                if os.path.getsize(target) == 0:
+                    return False
+    return True
 
-        # Adjust general settings for the CTk
-        self.geometry("800x700")
-        self.title("Mitglieder Management Portal")
 
-        # Frame Switcher
-        self.frames = {}
-        for F in (StartPage, BirthdayPage, HonorPage):
-            page_name = F.__name__
-            frame = F(parent=self, controller=self)
-            self.frames[page_name] = frame
+def main():
+    app = QApplication(sys.argv)
+    QCoreApplication.setOrganizationName("Mitgliederverwaltung")
+    QCoreApplication.setApplicationName("Mitglieder Management Portal")
+    apply_theme(app)
 
-            # put all of the pages in the same location;
-            # the one on the top of the stacking order
-            # will be the one that is visible.
-            frame.grid(row=0, column=0, sticky="nsew")
-            self.grid_rowconfigure(0, weight=1)
-            self.grid_columnconfigure(0, weight=1)
+    try:
+        config = Config()
+    except ConfigError as error:
+        QMessageBox.critical(None, "Problem mit der Konfigurationsdatei", str(error))
+        return 1
 
-        self.show_frame("StartPage")
+    window = MainWindow(config)
+    window.show()
 
-    def show_frame(self, page_name):
-        '''Show a frame for the given page name'''
-        frame = self.frames[page_name]
-        frame.tkraise()
+    # an excel file can be given as argument; --smoke-test checks the app and closes it again
+    paths = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
+    if "--smoke-test" in sys.argv:
+        try:
+            return 0 if paths and smoke_test(window, paths[0]) else 2
+        except Exception as error:
+            print("Smoke test failed: " + repr(error), file=sys.stderr)
+            return 2
+    if paths:
+        window.load_file(paths[0])
+    return app.exec()
 
 
 if __name__ == "__main__":
-
-    filetypes = (
-        ('xlsx files', '*.xlsx'),
-        ('xls files', '*.xls')
-    )
-
-    filename = fd.askopenfilename(
-        title='Wähle deine Mitgliederliste aus',
-        initialdir='/',
-        filetypes=filetypes)
-
-    if filename:
-        try:
-            app = MemberAdminApp(f=filename)
-        except Exception as e:
-            mb.showerror("Problem mit der Mitgliederliste", str(e))
-        else:
-            app.mainloop()
+    sys.exit(main())
