@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794653816.1265895,
-    "seen": 1794653863.6374981,
-    "ast_hash": "7c6435a38674a79ccffacc71f5d28730",
+    "mtime": 1794654127.3444538,
+    "seen": 1794654128.034989,
+    "ast_hash": "82279ff1de6e086973b86ad9435e59e6",
     "semantic_hash": ""
   },
   "README.md": {
@@ -147,6 +147,12 @@
     "mtime": 1794653482.2030857,
     "seen": 1794653863.637501,
     "ast_hash": "22e107c99feca07d1be80daf64b0b365",
+    "semantic_hash": ""
+  },
+  "IDEAS.md": {
+    "mtime": 1794654127.0109634,
+    "seen": 1794654128.03499,
+    "ast_hash": "dc19e8d7f871fc07224200e99697435d",
     "semantic_hash": ""
   }
 }

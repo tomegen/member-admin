@@ -70,7 +70,9 @@ Ehrung n analog mit „Mitglied seit“.
 
 ## Verteilung / offene Punkte (Stand 2026-11-14)
 - **Unsigniert:** Windows zeigt SmartScreen, macOS-Gatekeeper lehnt die App ab (`spctl: rejected`, geprüft). README erklärt das Öffnen.
-  Echte Lösung: Apple Developer ID + Notarisierung, Windows-Signatur — kostet Geld, Entscheidung offen.
+  Echte Lösung wäre Apple Developer ID + Notarisierung und eine Windows-Signatur (kostet Geld).
+  **Entscheidung Thomas (2026-11-14): vorerst nicht signieren.** Nicht erneut vorschlagen, außer er fragt danach.
+- Ideenliste mit Priorisierung: `IDEAS.md`.
 - macOS-Build nur Apple Silicon (`macos-latest`); Intel-Macs bräuchten einen eigenen Runner.
 - Workflow `release.yml` ist **nicht auf GitHub getestet** (nur lokal gebaut/Smoke-Test auf macOS, YAML geprüft). Windows-Build ungeprüft.
 - Ideen: Excel-Vorlage mit Dropdown für „Mitglied“, Spalten automatisch erkennen statt `config.ini`, PWA/Web-Variante für Smartphone.
