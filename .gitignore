@@ -160,3 +160,18 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# macOS / JetBrains
+.DS_Store
+.idea/
+
+# graphify (cache and local backups are not committed)
+graphify-out/cache/
+graphify-out/.graphify_build_state.json
+# machine-specific hook (contains absolute path of the local graphify install)
+.claude/settings.json*
+
+# real member lists must never be committed (only the example file is)
+*.xlsx
+*.xls
+!example_file.xlsx

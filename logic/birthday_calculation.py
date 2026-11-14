@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from icalendar import Calendar, Event
 from datetime import timedelta
+from logic.date_utils import shift_years
 
 
 # function to write all the birthdays into an ics file
@@ -17,12 +18,9 @@ def write_birthdays_into_ics(members, birthdays, from_date, to_date, ics_filenam
                 event = Event()
                 event.add('summary',
                           value=str(birthday) + ". Geburtstag " + member.first_name + " " + member.last_name)
-                event.add('dtstart', pd.Timestamp(year=member.birthday.year + birthday,
-                                                  month=member.birthday.month,
-                                                  day=member.birthday.day))
-                event.add('dtend', pd.Timestamp(year=member.birthday.year + birthday,
-                                                month=member.birthday.month,
-                                                day=member.birthday.day) + timedelta(days=1))
+                event_date = shift_years(member.birthday, birthday)
+                event.add('dtstart', event_date)
+                event.add('dtend', event_date + timedelta(days=1))
                 event.add('location', '')
                 event.add('description',
                           str(birthday) + '. Geburtstag von ' + member.first_name + " " + member.last_name)
@@ -50,7 +48,7 @@ def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filenam
         text += os.linesep*3
 
     # Write the text to the selected file
-    with open(txt_filename, "w") as file:
+    with open(txt_filename, "w", encoding="utf-8", newline="") as file:
         file.write(text)
     return True
 
@@ -59,7 +57,7 @@ def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filenam
 def is_birthday(member, birthday, from_date, to_date):
     if member.member == 0:
         return False
-    from_date = pd.Timestamp(year=from_date.year - birthday, month=from_date.month, day=from_date.day)
-    to_date = pd.Timestamp(year=to_date.year - birthday, month=to_date.month, day=to_date.day)
+    from_date = shift_years(from_date, -birthday)
+    to_date = shift_years(to_date, -birthday)
 
     return (member.birthday >= from_date) & (member.birthday <= to_date)

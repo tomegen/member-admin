@@ -1,5 +1,5 @@
-import pandas as pd
 import os
+from logic.date_utils import shift_years
 
 
 # write all the honors into a txt file
@@ -18,7 +18,7 @@ def write_honors_into_txt(members, honors, from_date, to_date, txt_filename):
         text += os.linesep*3
 
     # Write the text to the selected file
-    with open(txt_filename, "w") as file:
+    with open(txt_filename, "w", encoding="utf-8", newline="") as file:
         file.write(text)
     return True
 
@@ -27,7 +27,7 @@ def write_honors_into_txt(members, honors, from_date, to_date, txt_filename):
 def is_honor(member, honor, from_date, to_date):
     if member.member == 0:
         return False
-    from_date = pd.Timestamp(year=from_date.year - honor, month=from_date.month, day=from_date.day)
-    to_date = pd.Timestamp(year=to_date.year - honor, month=to_date.month, day=to_date.day)
+    from_date = shift_years(from_date, -honor)
+    to_date = shift_years(to_date, -honor)
 
     return (member.member_since >= from_date) & (member.member_since <= to_date)

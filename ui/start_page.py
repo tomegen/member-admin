@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import pandas as pd
 
 class StartPage(ctk.CTkFrame):
 
@@ -16,7 +17,9 @@ class StartPage(ctk.CTkFrame):
         current_member_label.pack(side="top", fill="x", pady=40)
 
         # New members
-        new_member_count = "Neue Mitglieder in diesem Kalenderjahr: " + str(controller.members.calculate_new_members())
+        current_year = pd.Timestamp.now().year
+        new_member_count = ("Neue Mitglieder in " + str(current_year) + ": "
+                            + str(controller.members.calculate_new_members(current_year)))
         new_member_label = ctk.CTkLabel(self,
                              text=new_member_count,
                              font=("Arial", 20, "bold"),

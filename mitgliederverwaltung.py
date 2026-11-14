@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from customtkinter import filedialog as fd
+from tkinter import messagebox as mb
 from config.config import Config
 from model.members import Members
 from ui.birthday_page import BirthdayPage
@@ -57,5 +58,9 @@ if __name__ == "__main__":
         filetypes=filetypes)
 
     if filename:
-        app = MemberAdminApp(f=filename)
-        app.mainloop()
+        try:
+            app = MemberAdminApp(f=filename)
+        except Exception as e:
+            mb.showerror("Problem mit der Mitgliederliste", str(e))
+        else:
+            app.mainloop()
