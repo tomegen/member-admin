@@ -1,5 +1,12 @@
 import os
 
+import pandas as pd
+
+
+def format_date(date):
+    return "unbekannt" if pd.isna(date) else str(date.strftime('%d.%m.%Y'))
+
+
 class Member:
 
     def __init__(self, last_name, first_name, street, plz, ort, birthday, phone_number, mobile_phone, member_since,
@@ -17,15 +24,17 @@ class Member:
         self.reference = reference
         self.member = member
 
+    def full_name(self):
+        return (self.first_name + " " + self.last_name).strip()
 
     def print(self, text):
-        text += self.first_name + " " + self.last_name + os.linesep
+        text += self.full_name() + os.linesep
 
         # Geburtstag:
-        text += "Geburtstag: " + str(self.birthday.strftime('%d.%m.%Y')) + os.linesep
+        text += "Geburtstag: " + format_date(self.birthday) + os.linesep
 
         # Mitglied seit:
-        text += "Mitglied seit: " + str(self.member_since.strftime('%d.%m.%Y')) + os.linesep
+        text += "Mitglied seit: " + format_date(self.member_since) + os.linesep
 
         # Telefonnummern
         if self.phone_number or self.mobile_phone:

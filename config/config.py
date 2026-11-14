@@ -1,25 +1,40 @@
 import configparser
 import os
 import sys
-from tkinter import messagebox as mb
+
+
+class ConfigError(Exception):
+    pass
 
 
 class Config:
     CONFIG_NAME = "config.ini"
 
-    # config.ini lies next to the exe (PyInstaller) or in the project root, independent of the working directory
+    # config.ini is searched next to the exe / the .app (so it can be edited), then in the bundled
+    # default of the packaged app, then in the project root. It is independent of the working directory.
     @staticmethod
     def config_path():
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        candidates = []
         if getattr(sys, "frozen", False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_dir, Config.CONFIG_NAME)
+            exe_dir = os.path.dirname(sys.executable)
+            candidates.append(exe_dir)
+            # macOS: <folder>/Mitgliederverwaltung.app/Contents/MacOS/<exe> -> <folder>
+            candidates.append(os.path.abspath(os.path.join(exe_dir, "..", "..", "..")))
+            candidates.append(getattr(sys, "_MEIPASS", exe_dir))
+        candidates.append(project_root)
+        for directory in candidates:
+            path = os.path.join(directory, Config.CONFIG_NAME)
+            if os.path.isfile(path):
+                return path
+        return os.path.join(candidates[0], Config.CONFIG_NAME)
 
-    def __init__(self):
+    def __init__(self, path=None):
         try:
+            path = path or self.config_path()
             config = configparser.ConfigParser()
-            config.read(self.config_path(), encoding="utf-8")
+            if not config.read(path, encoding="utf-8"):
+                raise ConfigError("Datei nicht gefunden: " + path)
 
             # set values:
             self.birthday_config = [int(num) for num in config.get("birthday", "possibilities").split(",")]
@@ -36,11 +51,10 @@ class Config:
             self.iban_config = config.get("excel_columns", "iban")
             self.reference_config = config.get("excel_columns", "reference")
             self.member_config = config.get("excel_columns", "member")
-
-            if not self.last_name_config or not self.first_name_config or not self.birthdays_config or not self.member_since_config or not self.member_config:
-                mb.showerror("Problem mit Konfigurationsdatei", "Vorname, Nachname, Geburtstag oder Mitglied seit Config ist nicht gegeben!")
-                raise SystemExit(1)
-
         except Exception as e:
-            mb.showerror("Problem mit Konfigurationsdatei", "Die Konfigurationsdatei config.ini fehlt oder ist fehlerhaft! Fehler:" + str(e))
-            raise SystemExit(1)
+            raise ConfigError("Die Konfigurationsdatei config.ini fehlt oder ist fehlerhaft! Fehler: " + str(e))
+
+        if not (self.last_name_config and self.first_name_config and self.birthdays_config
+                and self.member_since_config and self.member_config):
+            raise ConfigError("In der config.ini fehlt der Spaltenname für Nachname, Vorname, Geburtstag, "
+                              "Mitglied seit oder Mitglied.")

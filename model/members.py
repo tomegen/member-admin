@@ -1,9 +1,43 @@
+import numbers
+
 import pandas as pd
-from tkinter import messagebox as mb
 from model.member import Member
+
 
 class MemberListError(Exception):
     pass
+
+
+# a problem found in the member list; row is the row number as shown in excel
+class Issue:
+
+    def __init__(self, row, name, active, message):
+        self.row = row
+        self.name = name
+        self.active = active
+        self.message = message
+
+
+# excel cells formatted as number hold a serial day number (not nanoseconds)
+def parse_date(value):
+    if pd.isna(value):
+        return pd.NaT
+    if isinstance(value, numbers.Real):  # also numpy numbers
+        return pd.to_datetime(value, unit="D", origin="1899-12-30")
+    # iso text (1967-06-01) is read as it is, german text (01.06.1967) is read day first
+    parsed = pd.to_datetime(value, format="ISO8601", errors="coerce")
+    if pd.isna(parsed):
+        parsed = pd.to_datetime(value, dayfirst=True, errors="coerce")
+    return parsed
+
+
+# cell content as text: empty cells become "", numbers like 12345.0 become "12345"
+def to_text(value):
+    if pd.isna(value):
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 class Members:
@@ -11,8 +45,14 @@ class Members:
     def __init__(self, filename, config):
 
         self.members = []
+        self.issues = []
         self.filename = filename
-        self.sheet = pd.read_excel(filename, sheet_name=0)
+        try:
+            self.sheet = pd.read_excel(filename, sheet_name=0)
+        except Exception as e:
+            raise MemberListError("Die Datei konnte nicht gelesen werden.\n\nIst es eine Excel-Datei (.xlsx oder .xls) "
+                                  "und ist sie vielleicht noch in einem anderen Programm geöffnet?\n\n"
+                                  "Technische Details: " + str(e))
 
         # mandatory columns have to exist in the excel file
         mandatory_columns = [config.last_name_config, config.first_name_config, config.birthdays_config,
@@ -35,80 +75,53 @@ class Members:
         member_status = self.sheet[config.member_config]
 
         for i in range(len(last_names)):
+            row = i + 2  # row number in excel (row 1 is the header)
+
+            # rows without any content are skipped
+            mandatory_values = [last_names[i], first_names[i], birthdays[i], members_since[i], member_status[i]]
+            if all(pd.isna(value) for value in mandatory_values):
+                continue
+
             # mandatory params
-            last_name = str(last_names[i])
-            first_name = str(first_names[i])
-            member_since = pd.to_datetime(members_since[i])
-            birthday = pd.to_datetime(birthdays[i])
+            last_name = to_text(last_names[i])
+            first_name = to_text(first_names[i])
+            member_since = parse_date(members_since[i])
+            birthday = parse_date(birthdays[i])
             member = pd.to_numeric(member_status[i], errors="coerce")
-
-            if last_name == "nan":
-                mb.showwarning("Param missing", "last_name param is missing. Param: " + last_name)
-                last_name = ""
-
-            if first_name == "nan":
-                mb.showwarning("Param missing", "first_name param is missing. Param: " + first_name)
-                first_name = ""
-
-            if str(member_since) == "NaT":
-                mb.showwarning("Param missing", "member_since param is missing. Member: " + first_name + " " + last_name)
-                member_since = pd.Timestamp(year=1000, month=1, day=1)
-
-            if str(birthday) == "NaT":
-                mb.showwarning("Param missing", "birthday param is missing. Member: " + first_name + " " + last_name)
-                birthday = pd.Timestamp(year=1000, month=1, day=1)
+            name = (first_name + " " + last_name).strip() or "(ohne Namen)"
 
             if member not in (0, 1):
-                mb.showwarning("Param missing", "member param is missing or not 0/1, therefore don`t count the member. Member: " + first_name + " " + last_name)
+                self.issues.append(Issue(row, name, False, "Mitglied-Status fehlt oder ist nicht 0/1, das Mitglied "
+                                                           "wird nicht mitgezählt."))
                 member = 0
             member = int(member)
+            active = member == 1
 
+            if not last_name or not first_name:
+                self.issues.append(Issue(row, name, active, "Vorname oder Nachname fehlt."))
 
-            #optional params
-            street = str(streets[i])
-            plz = str(plzs[i])
-            ort = str(orte[i])
-            phone_number = str(phones[i])
-            mobile_phone = str(mobile_phones[i])
-            iban = str(ibans[i])
-            reference = str(references[i])
+            if pd.isna(member_since):
+                reason = "fehlt" if pd.isna(members_since[i]) else "ist nicht lesbar: " + to_text(members_since[i])
+                self.issues.append(Issue(row, name, active, "Mitglied seit " + reason +
+                                         ", es kann keine Ehrung berechnet werden."))
 
+            if pd.isna(birthday):
+                reason = "fehlt" if pd.isna(birthdays[i]) else "ist nicht lesbar: " + to_text(birthdays[i])
+                self.issues.append(Issue(row, name, active, "Geburtstag " + reason +
+                                         ", es kann kein Geburtstag berechnet werden."))
 
-            if street == "nan":
-                street = ""
-
-            if plz == "nan":
-                plz = ""
-
-            if ort == "nan":
-                ort = ""
-
-            if phone_number == "nan":
-                phone_number = ""
-
-            if mobile_phone == "nan":
-                mobile_phone = ""
-
-            if iban == "nan":
-                iban = ""
-
-            if reference == "nan":
-                reference = ""
-
-            member = Member(last_name=last_name,
+            self.members.append(Member(last_name=last_name,
                                        first_name=first_name,
-                                       street = street,
-                                       plz=plz,
-                                       ort=ort,
+                                       street=to_text(streets[i]),
+                                       plz=to_text(plzs[i]),
+                                       ort=to_text(orte[i]),
                                        birthday=birthday,
-                                       phone_number=phone_number,
-                                       mobile_phone=mobile_phone,
+                                       phone_number=to_text(phones[i]),
+                                       mobile_phone=to_text(mobile_phones[i]),
                                        member_since=member_since,
-                                       iban=iban,
-                                       reference=reference,
-                                       member=member)
-
-            self.members.append(member)
+                                       iban=to_text(ibans[i]),
+                                       reference=to_text(references[i]),
+                                       member=member))
 
     # an optional column that is not in the excel file is treated as empty
     def optional_column(self, name):
@@ -118,22 +131,15 @@ class Members:
 
     # Calculate the total members
     def calculate_members(self):
-        member_count = 0
-        for x in self.members:
-            member_count = member_count + x.member
+        return sum(member.member for member in self.members)
 
-        print("Member total count: " + str(member_count))
-        return member_count
+    # Calculate the former members / entries that are not counted
+    def calculate_inactive(self):
+        return sum(1 for member in self.members if member.member == 0)
 
     # Calculate the new members in the given year (default: current year)
     def calculate_new_members(self, year=None):
-        member_count = 0
         if year is None:
             year = pd.Timestamp.now().year
-        for member in self.members:
-            if member.member_since.year == year:
-                member_count = member.member + member_count
-
-        print("New member count: " + str(member_count))
-        return member_count
-
+        return sum(member.member for member in self.members
+                   if not pd.isna(member.member_since) and member.member_since.year == year)

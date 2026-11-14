@@ -1,5 +1,15 @@
 import os
+import pandas as pd
 from logic.date_utils import shift_years
+from model.entry import Entry
+
+
+# find all members with one of the given honors (years of membership) in the selected timeframe
+def find_honors(members, honors, from_date, to_date):
+    return [Entry(honor, member, shift_years(member.member_since, honor))
+            for honor in honors
+            for member in members
+            if is_honor(member, honor, from_date, to_date)]
 
 
 # write all the honors into a txt file
@@ -8,13 +18,13 @@ def write_honors_into_txt(members, honors, from_date, to_date, txt_filename):
     text += os.linesep *2
 
     # loop through all the honors
+    entries = find_honors(members, honors, from_date, to_date)
     for honor in honors:
-        print("Process birthday: " + str(honor))
         text += str(honor) + " Jahre Ehrung: "
         text += os.linesep
-        for member in members:
-            if is_honor(member, honor, from_date, to_date):
-                text = member.print(text)
+        for entry in entries:
+            if entry.number == honor:
+                text = entry.member.print(text)
         text += os.linesep*3
 
     # Write the text to the selected file
@@ -25,9 +35,9 @@ def write_honors_into_txt(members, honors, from_date, to_date, txt_filename):
 
 # Calculate if a member will get an honor
 def is_honor(member, honor, from_date, to_date):
-    if member.member == 0:
+    if member.member == 0 or pd.isna(member.member_since):
         return False
     from_date = shift_years(from_date, -honor)
     to_date = shift_years(to_date, -honor)
 
-    return (member.member_since >= from_date) & (member.member_since <= to_date)
+    return bool((member.member_since >= from_date) & (member.member_since <= to_date))
