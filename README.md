@@ -1,34 +1,89 @@
-# member-admin
+# Mitglieder Management Portal
 
-## Anleitung "mitgliederverwaltung" Applikation
+Berechnet aus Ihrer Mitgliederliste (Excel) automatisch **runde Geburtstage** und **Ehrungen für langjährige
+Mitgliedschaft** – für ein Jahr oder einen beliebigen Zeitraum. Das Ergebnis können Sie als Text, als Excel-Datei
+oder (bei Geburtstagen) als Kalenderdatei speichern.
 
-**Vorbereitung Linux/Mac-Nutzer:** <br>
-sourceCode (python) herunterladen. <br>
-Installation von Python 3.12. benötigt + pip <br>
-Packages pandas, icalendar, customtkinter, datetime, tkcalendar, tkinter, configparser werden benötigt. <br>
-main-Methode in mitgliederverwaltung.py sollte genutzt werden. 
+Ihre Daten bleiben auf Ihrem Computer. Die Mitgliederliste wird nur gelesen und nie verändert.
 
-**Vorbereitung Windows-Nutzer:** <br>
-"mitgliederverwaltung_VERSION.exe" + config.ini herunterladen<br><br>
+## Installation
 
-**Anleitung zur Nutzung des Tools:** <br>
-"README.md" kann genutzt werden als Anleitung und für hilfreiche Tipps. <br>
-"Release_Notes.md" zeigt alle Änderungen zwischen den neuen Versionen, die veröffentlicht werden. <br>
+Laden Sie unter [Releases](../../releases) die Datei für Ihr System herunter und entpacken Sie sie:
 
-Anpassung "config.ini": <br>
-Das Tool kann mit Excel-Dateien im ".xls" oder ".xlsx" Format umgehen. <br>
-In der ersten Zeile erwartet das Tool eine Beschriftung der jeweiligen Spalte (z.B. Vorname für die Vornamenspalte). <br>
-In den darauffolgenden Zeilen werden alle Mitglieder erwartet mit befüllten Daten.<br>
-Benötigte Parameter: Vorname, Nachname, Mitgliedsdatum, Geburtstag und der Mitgliederstatus müssen befüllt sein. <br>
-Optionale Parameter: Alle anderen Werte sind optional<br><br>
+| System | Datei | Starten |
+|---|---|---|
+| Windows | `Mitgliederverwaltung_<Version>_windows.zip` | Ordner entpacken, `Mitgliederverwaltung.exe` doppelklicken |
+| Mac (Apple Silicon, ab 2020) | `Mitgliederverwaltung_<Version>_mac.zip` | entpacken, `Mitgliederverwaltung.app` doppelklicken |
 
-**Konfigurationen:** <br>
-birthday.possibilities: Gibt an, welche Geburtstage in der Applikation überhaupt auswählbar sind. <br>
-honor.possibilities: Gibt an, welche Ehrungen in der Applikation überhaupt auswählbar sind. <br>
-excel_columns: Gibt den Namen der Spalte an, die in der Applikation befüllt sind <br>
-Beispiel: Die Vornamen sind in der Spalte A eingetragen. Wähle den Wert des Feldes A1, z.B. "Vorname" und trage ihn unter "first_name" ein.<br><br> 
+**Warum erscheint beim ersten Start eine Warnung?** Das Programm ist (noch) nicht bei Microsoft bzw. Apple
+registriert; das kostet jährlich Geld. Das Programm ist trotzdem unbedenklich, der Quellcode ist öffentlich.
+- **Windows:** „Weitere Informationen“ → „Trotzdem ausführen“.
+- **Mac:** Wenn macOS das Öffnen verweigert: *Systemeinstellungen → Datenschutz & Sicherheit*, nach unten scrollen
+  und bei der Meldung zu „Mitgliederverwaltung“ auf **„Trotzdem öffnen“** klicken. Ab dann startet die App normal.
+  (Bei älteren macOS-Versionen geht auch: Rechtsklick auf die App → „Öffnen“.)
 
-Nachdem die Konfigurationsdatei komplett befüllt wurde, kann die ".exe" Datei gestartet werden.<br>
-Die aktuelle Mitgliederanzahl und neuen Mitglieder im aktuellen Jahr werden als Label dargestellt. <br>
-Außerdem gibt es die Möglichkeiten "Geburtstage" und "Ehrungen", die selbsterklärend sind. 
+Lassen Sie die Datei `config.ini` im selben Ordner wie das Programm (neben der `.exe` bzw. neben der `.app`).
 
+## So geht es
+
+1. Programm starten und die **Excel-Mitgliederliste auswählen** (oder die Datei in das Fenster ziehen).
+   Beim nächsten Start bietet das Programm die zuletzt benutzte Datei direkt an.
+2. Oben das **Auswertungsjahr** prüfen. Ab Oktober schlägt das Programm automatisch das nächste Jahr vor.
+3. Im Tab **Geburtstage** oder **Ehrungen** sehen Sie sofort die Treffer. Mit den Häkchen wählen Sie, welche
+   Geburtstage bzw. Jubiläen berücksichtigt werden. Wer nicht ein ganzes Jahr braucht, wählt „Eigener Zeitraum“.
+4. Mit **Als Textdatei / Excel-Datei / Kalender (ICS) speichern** erzeugen Sie die Liste. Die Kalenderdatei
+   lässt sich in Outlook, Apple Kalender oder Google Kalender importieren (Ganztagstermine).
+5. Im Tab **Datenprüfung** steht, welche Einträge in Ihrer Liste unvollständig sind – mit der **Zeilennummer aus
+   Excel**. Diese Personen fehlen sonst in den Auswertungen. Korrigieren Sie sie in Excel, speichern Sie und klicken Sie
+   oben auf **Neu einlesen**.
+
+## Die Excel-Liste
+
+In der ersten Zeile stehen die Spaltenüberschriften, darunter je Zeile ein Mitglied. Die Beispieldatei
+`example_file.xlsx` zeigt den Aufbau. Die Spalten dürfen in beliebiger Reihenfolge stehen, weitere Spalten werden ignoriert.
+
+| Spalte | Pflicht? | Hinweis |
+|---|---|---|
+| Name, Vorname | ja | |
+| Geburtstag | ja | als Excel-Datum |
+| Mitglied seit | ja | als Excel-Datum |
+| Mitglied | ja | `1` = aktives Mitglied, `0` = ausgetreten/nicht zählend (Zeile bitte nicht löschen, auf `0` setzen) |
+| Strasse, Plz, Ort, Telefon, Mobil, IBAN, Mandatreferenz | nein | Telefon, Anschrift erscheinen in den Ergebnislisten |
+
+Leere Zeilen werden übersprungen. Ob die Liste nur am PC oder auch auf dem Smartphone gepflegt wird, spielt keine Rolle.
+
+## Regeln der Berechnung
+
+- Es zählen nur Mitglieder mit `Mitglied = 1`.
+- **Geburtstag:** Wer im gewählten Zeitraum z. B. seinen 60. Geburtstag hat. Wer am **29. Februar** geboren ist, feiert in
+  Jahren ohne Schalttag am **28. Februar**.
+- **Ehrung:** Wer im gewählten Zeitraum z. B. 25 Jahre Mitglied wird (Datum „Mitglied seit“ plus Jahre).
+- Fehlt der Geburtstag oder „Mitglied seit“, erscheint die Person in der Datenprüfung und in der jeweiligen Auswertung nicht.
+
+## Einstellungen (`config.ini`)
+
+- `[birthday] possibilities` und `[honor] possibilities`: welche Geburtstage bzw. Jubiläumsjahre zur Auswahl stehen.
+- `[excel_columns]`: Name der jeweiligen Spalte in Ihrer Excel-Liste. Heißt Ihre Spalte anders, tragen Sie den
+  Namen hier ein (genau wie in Zeile 1 der Excel-Datei).
+
+Die Datei ist ein einfacher Text; öffnen Sie sie mit dem Editor.
+
+---
+
+## Für Entwickler
+
+Python 3.12, [PySide6](https://doc.qt.io/qtforpython-6/) (Oberfläche), pandas/openpyxl/xlrd (Excel), icalendar.
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r requirements-dev.txt   # Windows: .venv\Scripts\python.exe
+.venv/bin/python mitgliederverwaltung.py [mitgliederliste.xlsx]
+.venv/bin/python tests/test_regressions.py && .venv/bin/python tests/test_ui.py
+.venv/bin/python build.py 0.1.0        # erzeugt release/Mitgliederverwaltung_0.1.0_<system>.zip
+```
+
+- **Release:** GitHub → Actions → „Build and Release“ → *Run workflow* mit Versionsnummer (z. B. `0.1.0`). Der Workflow
+  testet, baut Windows- und Mac-Version, prüft die gepackten Apps (`--smoke-test`) und legt das Release an.
+  Bei jedem Push auf `main` laufen nur Tests und Build.
+- Details für die Weiterentwicklung (auch mit Claude Code): `CLAUDE.md`.
+- Echte Mitgliederlisten gehören nie ins Repository (`data/` und `*.xlsx` sind ignoriert).

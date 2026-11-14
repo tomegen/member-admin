@@ -1,14 +1,16 @@
 {
   "0": "with",
-  "1": "mitgliederverwaltung.py",
+  "1": "pandas",
   "2": "birthday_calculation.py",
-  "3": "version",
+  "3": "main_window.py",
   "4": "test_regressions.py",
-  "5": "Aufbau",
+  "5": "MainWindow",
   "6": "CLAUDE.md — member-admin (\"Mitglieder Management Portal\")",
   "7": "Release_Notes.md",
-  "8": "member-admin",
+  "8": "Mitglieder Management Portal",
   "9": ".claude/CLAUDE.md",
   "10": "Members",
-  "11": "Config"
+  "11": "ResultPage",
+  "12": "version",
+  "13": "Exception"
 }

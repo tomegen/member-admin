@@ -175,3 +175,9 @@ graphify-out/.graphify_build_state.json
 *.xlsx
 *.xls
 !example_file.xlsx
+
+# local data folder with real member lists (never committed)
+data/
+
+# build output of build.py
+release/

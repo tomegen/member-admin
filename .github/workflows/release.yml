@@ -1,0 +1,93 @@
+name: Build and Release
+
+# push to main: run the tests and build both apps (no release)
+# manual run with a version: additionally publish the release with the Windows and macOS zip
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version / tag name (e.g. 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          - os: macos-latest   # Apple Silicon
+            name: mac
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen   # tests and smoke test need no screen
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: pip
+        cache-dependency-path: requirements-dev.txt
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Run tests
+      run: |
+        python tests/test_regressions.py
+        python tests/test_ui.py
+
+    - name: Build app and zip
+      run: python build.py "${{ inputs.version || 'dev' }}"
+
+    # starts the packaged app, loads the example list and writes every export once (exit code 0 = ok)
+    - name: Smoke test packaged app (Windows)
+      if: matrix.name == 'windows'
+      shell: pwsh
+      run: |
+        $process = Start-Process -FilePath "release\Mitgliederverwaltung\Mitgliederverwaltung.exe" -ArgumentList "--smoke-test", "example_file.xlsx" -Wait -PassThru
+        if ($process.ExitCode -ne 0) { throw "Smoke test failed with exit code $($process.ExitCode)" }
+
+    - name: Smoke test packaged app (macOS)
+      if: matrix.name == 'mac'
+      run: release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung --smoke-test example_file.xlsx
+
+    - name: Upload zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: Mitgliederverwaltung-${{ matrix.name }}
+        path: release/*.zip
+        if-no-files-found: error
+
+  release:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release with the default GITHUB_TOKEN
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: Mitgliederverwaltung-*
+        path: zips
+        merge-multiple: true
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.version }}
+        name: Release ${{ inputs.version }}
+        files: zips/*.zip
