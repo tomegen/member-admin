@@ -1,21 +1,14 @@
 import numbers
 
 import pandas as pd
+from model.checks import plausibility_issues
+from model.columns import detect_columns, missing_mandatory
+from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
 
 
 class MemberListError(Exception):
     pass
-
-
-# a problem found in the member list; row is the row number as shown in excel
-class Issue:
-
-    def __init__(self, row, name, active, message):
-        self.row = row
-        self.name = name
-        self.active = active
-        self.message = message
 
 
 # excel cells formatted as number hold a serial day number (not nanoseconds)
@@ -42,8 +35,9 @@ def to_text(value):
 
 class Members:
 
-    def __init__(self, filename, config):
+    def __init__(self, filename, config, today=None):
 
+        today = pd.Timestamp.now().normalize() if today is None else pd.Timestamp(today)
         self.members = []
         self.issues = []
         self.filename = filename
@@ -54,25 +48,29 @@ class Members:
                                   "und ist sie vielleicht noch in einem anderen Programm geöffnet?\n\n"
                                   "Technische Details: " + str(e))
 
-        # mandatory columns have to exist in the excel file
-        mandatory_columns = [config.last_name_config, config.first_name_config, config.birthdays_config,
-                             config.member_since_config, config.member_config]
-        missing_columns = [column for column in mandatory_columns if column not in self.sheet.columns]
+        # the columns are recognized by their heading (usual spellings, or the name from config.ini)
+        columns = detect_columns(list(self.sheet.columns), config)
+        missing_columns = missing_mandatory(columns)
         if missing_columns:
-            raise MemberListError("In der Excel-Datei fehlen Pflichtspalten: " + ", ".join(missing_columns))
+            raise MemberListError("In der Excel-Datei wurden diese Spalten nicht gefunden: " +
+                                  ", ".join(missing_columns) + ".\n\nGefundene Überschriften in Zeile 1: " +
+                                  ", ".join(str(heading) for heading in self.sheet.columns) +
+                                  "\n\nBitte benennen Sie die Überschrift in Excel entsprechend um, z. B. in „" +
+                                  missing_columns[0] + "“.")
 
-        last_names = self.sheet[config.last_name_config]
-        first_names = self.sheet[config.first_name_config]
-        streets = self.optional_column(config.street_config)
-        plzs = self.optional_column(config.plz_config)
-        orte = self.optional_column(config.ort_config)
-        birthdays = self.sheet[config.birthdays_config]
-        phones = self.optional_column(config.phone_config)
-        mobile_phones = self.optional_column(config.mobile_phone_config)
-        members_since = self.sheet[config.member_since_config]
-        ibans = self.optional_column(config.iban_config)
-        references = self.optional_column(config.reference_config)
-        member_status = self.sheet[config.member_config]
+        last_names = self.sheet[columns["last_name"]]
+        first_names = self.sheet[columns["first_name"]]
+        streets = self.optional_column(columns["street"])
+        plzs = self.optional_column(columns["plz"])
+        orte = self.optional_column(columns["ort"])
+        birthdays = self.sheet[columns["birthday"]]
+        phones = self.optional_column(columns["phone"])
+        mobile_phones = self.optional_column(columns["mobile_phone"])
+        members_since = self.sheet[columns["member_since"]]
+        ibans = self.optional_column(columns["iban"])
+        references = self.optional_column(columns["reference"])
+        member_status = self.sheet[columns["member"]]
+        rows = []
 
         for i in range(len(last_names)):
             row = i + 2  # row number in excel (row 1 is the header)
@@ -110,22 +108,26 @@ class Members:
                 self.issues.append(Issue(row, name, active, "Geburtstag " + reason +
                                          ", es kann kein Geburtstag berechnet werden."))
 
-            self.members.append(Member(last_name=last_name,
-                                       first_name=first_name,
-                                       street=to_text(streets[i]),
-                                       plz=to_text(plzs[i]),
-                                       ort=to_text(orte[i]),
-                                       birthday=birthday,
-                                       phone_number=to_text(phones[i]),
-                                       mobile_phone=to_text(mobile_phones[i]),
-                                       member_since=member_since,
-                                       iban=to_text(ibans[i]),
-                                       reference=to_text(references[i]),
-                                       member=member))
+            entry = Member(last_name=last_name,
+                           first_name=first_name,
+                           street=to_text(streets[i]),
+                           plz=to_text(plzs[i]),
+                           ort=to_text(orte[i]),
+                           birthday=birthday,
+                           phone_number=to_text(phones[i]),
+                           mobile_phone=to_text(mobile_phones[i]),
+                           member_since=member_since,
+                           iban=to_text(ibans[i]),
+                           reference=to_text(references[i]),
+                           member=member)
+            self.members.append(entry)
+            rows.append((row, entry))
+
+        self.issues += plausibility_issues(rows, today)
 
     # an optional column that is not in the excel file is treated as empty
     def optional_column(self, name):
-        if name in self.sheet.columns:
+        if name is not None:
             return self.sheet[name]
         return pd.Series(float("nan"), index=self.sheet.index)
 

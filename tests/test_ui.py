@@ -100,12 +100,11 @@ class UiTest(unittest.TestCase):
     def test_all_exports_are_written(self):
         self.window.load_file(self.sample())
         self.window.year_spin.setValue(2027)
-        for page, kinds in ((self.window.birthdays, ("txt", "xlsx", "ics")), (self.window.honors, ("txt", "xlsx"))):
-            for kind in kinds:
+        for page in (self.window.birthdays, self.window.honors):
+            for kind in ("txt", "xlsx", "ics"):
                 path = os.path.join(self.tmp.name, page.spec.file_stem + "." + kind)
                 page.write(kind, path)
                 self.assertGreater(os.path.getsize(path), 0, kind)
-        self.assertFalse(hasattr(self.window.honors, "ics_button"))
 
     def test_issue_tab_counts_only_active_members_and_can_show_all(self):
         self.window.load_file(self.sample())
@@ -126,6 +125,72 @@ class UiTest(unittest.TestCase):
         self.write_excel([["Muster", "Max", "1967-06-01", "2002-05-05", 1, "0171"]])
         self.window.reload()
         self.assertEqual(self.window.overview.active_card[1].text(), "1")
+
+    def test_overview_shows_what_is_coming_up(self):
+        path = self.write_excel([["Muster", "Max", "1967-06-01", "2002-05-05", 1, ""],
+                                 ["Beispiel", "Eva", "1970-01-01", "2010-01-01", 1, ""]])
+        self.window.load_file(path)
+        self.window.overview.refresh(self.window.members, 2027, [60], [25], today=pd.Timestamp("2027-05-04"))
+        table = self.window.overview.upcoming_table
+        self.assertEqual([(table.item(r, 0).text(), table.item(r, 1).text()) for r in range(table.rowCount())],
+                         [("05.05.2027", "25 Jahre Mitgliedschaft"), ("01.06.2027", "60. Geburtstag")])
+        self.window.overview.refresh(self.window.members, 2027, [60], [25], today=pd.Timestamp("2027-08-01"))
+        self.assertEqual(table.rowCount(), 0)
+        self.assertIn("nichts an", self.window.overview.upcoming_label.text())
+
+    def test_settings_change_the_choices_and_are_remembered(self):
+        self.window.load_file(self.sample())
+        self.window.year_spin.setValue(2027)
+        page = self.window.birthdays
+        page.checkboxes[page.spec.numbers.index(75)].setChecked(False)
+        self.window.set_numbers([60, 75, 80], [25])
+        self.assertEqual([box.text() for box in page.checkboxes], ["60. Geburtstag", "75. Geburtstag", "80. Geburtstag"])
+        self.assertFalse(page.checkboxes[1].isChecked())                       # unchecked stays unchecked
+        self.assertEqual(page.table.rowCount(), 1)
+        self.assertEqual(len(self.window.honors.checkboxes), 1)
+        self.assertEqual(QSettings().value("birthday_numbers"), "60, 75, 80")
+        # a new window (= next start of the app) uses the saved numbers
+        again = MainWindow(Config())
+        self.addCleanup(again.close)
+        self.assertEqual(again.config.birthday_config, [60, 75, 80])
+        # the defaults are not stored
+        self.window.set_numbers(self.window.default_birthdays, self.window.default_honors)
+        self.assertIsNone(QSettings().value("birthday_numbers"))
+
+    def test_minimal_option_and_reminder_are_used_for_the_files(self):
+        self.window.load_file(self.sample())
+        self.window.year_spin.setValue(2027)
+        page = self.window.birthdays
+        page.minimal_check.setChecked(True)
+        page.reminder_spin.setValue(14)
+        xlsx, ics = os.path.join(self.tmp.name, "a.xlsx"), os.path.join(self.tmp.name, "a.ics")
+        page.write("xlsx", xlsx)
+        page.write("ics", ics)
+        self.assertEqual(list(pd.read_excel(xlsx).columns), ["Anlass", "Datum", "Vorname", "Name"])
+        with open(ics, "rb") as file:
+            self.assertIn(b"TRIGGER:-P13DT15H", file.read().replace(b"\r\n", b""))
+        self.assertEqual(QSettings().value("reminder_days"), 14)
+
+    def test_statistics_tab_follows_the_year(self):
+        self.window.load_file(self.sample())
+        self.window.year_spin.setValue(2027)
+        page = self.window.statistics_page
+        self.assertEqual(page.stichtag_edit.date(), QDate(2027, 12, 31))
+        self.assertEqual(page.statistics.active, 3)
+        self.assertEqual(page.figures_table.item(0, 1).text(), "3")
+        self.assertEqual(page.groups_table.rowCount(), 7)
+        self.assertEqual(page.statistics.unknown_birthday, 1)
+        self.assertIn("1 aktive", page.note_label.text())
+        self.window.year_spin.setValue(2028)
+        self.assertEqual(page.stichtag_edit.date(), QDate(2028, 12, 31))
+
+    def test_template_button_writes_a_usable_list(self):
+        from unittest import mock
+        path = os.path.join(self.tmp.name, "vorlage.xlsx")
+        with mock.patch("ui.main_window.save_file", side_effect=lambda parent, name, flt, write: write(path)):
+            self.window.welcome.template_requested.emit()
+        self.assertTrue(self.window.load_file(path))
+        self.assertEqual(self.window.members.members, [])
 
 
 if __name__ == "__main__":

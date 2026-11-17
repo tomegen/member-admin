@@ -6,6 +6,8 @@ from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.config import Config, ConfigError
+from logic.statistics import write_statistics_into_xlsx
+from logic.template import write_member_template
 from ui.main_window import MainWindow
 from ui.theme import apply_theme
 
@@ -16,12 +18,18 @@ def smoke_test(window, path):
     if not window.load_file(path):
         return False
     with tempfile.TemporaryDirectory() as folder:
-        for page, kinds in ((window.birthdays, ("txt", "xlsx", "ics")), (window.honors, ("txt", "xlsx"))):
-            for kind in kinds:
+        for page in (window.birthdays, window.honors):
+            for kind in ("txt", "xlsx", "ics"):
                 target = os.path.join(folder, page.spec.file_stem + "." + kind)
                 page.write(kind, target)
                 if os.path.getsize(target) == 0:
                     return False
+        target = os.path.join(folder, "Statistik.xlsx")
+        write_statistics_into_xlsx(window.statistics_page.statistics, target)
+        template = os.path.join(folder, "Vorlage.xlsx")
+        write_member_template(template, window.config)
+        if os.path.getsize(target) == 0 or os.path.getsize(template) == 0:
+            return False
     return True
 
 

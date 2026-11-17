@@ -2,9 +2,35 @@ import configparser
 import os
 import sys
 
+# used when config.ini is missing or leaves a setting out, so the app also works without the file
+DEFAULTS = {
+    "birthday": {"possibilities": "16,18,20,30,40,50,60,65,70,75,80,85,90,95,100,105,110"},
+    "honor": {"possibilities": "15,20,25,30,35,40,45,50,55,60,65,70,75"},
+    "excel_columns": {
+        "last_name": "Name", "first_name": "Vorname", "birthday": "Geburtstag", "street": "Strasse", "plz": "Plz",
+        "ort": "Ort", "phone": "Telefon", "mobile_phone": "Mobil", "member_since": "Mitglied seit", "iban": "IBAN",
+        "reference": "Mandatreferenz", "member": "Mitglied",
+    },
+}
+
 
 class ConfigError(Exception):
     pass
+
+
+# "16, 18 20;30" -> [16, 18, 20, 30] (sorted, no duplicates); ValueError with a readable message otherwise
+def parse_numbers(text, highest=120):
+    parts = text.replace(";", ",").replace(" ", ",").split(",")
+    numbers = set()
+    for part in parts:
+        if not part:
+            continue
+        if not part.isdigit() or not 1 <= int(part) <= highest:
+            raise ValueError("„" + part + "“ ist keine gültige Zahl (erlaubt: 1 bis " + str(highest) + ").")
+        numbers.add(int(part))
+    if not numbers:
+        raise ValueError("Bitte mindestens eine Zahl eingeben.")
+    return sorted(numbers)
 
 
 class Config:
@@ -27,18 +53,20 @@ class Config:
             path = os.path.join(directory, Config.CONFIG_NAME)
             if os.path.isfile(path):
                 return path
-        return os.path.join(candidates[0], Config.CONFIG_NAME)
+        return None
 
+    # without a path, a missing config.ini is fine (defaults); a path that was asked for has to exist
     def __init__(self, path=None):
         try:
-            path = path or self.config_path()
             config = configparser.ConfigParser()
-            if not config.read(path, encoding="utf-8"):
+            config.read_dict(DEFAULTS)
+            path = path or self.config_path()
+            if path and not config.read(path, encoding="utf-8"):
                 raise ConfigError("Datei nicht gefunden: " + path)
 
             # set values:
-            self.birthday_config = [int(num) for num in config.get("birthday", "possibilities").split(",")]
-            self.honor_config = [int(num) for num in config.get("honor", "possibilities").split(",")]
+            self.birthday_config = parse_numbers(config.get("birthday", "possibilities"))
+            self.honor_config = parse_numbers(config.get("honor", "possibilities"))
             self.last_name_config = config.get("excel_columns", "last_name")
             self.first_name_config = config.get("excel_columns", "first_name")
             self.birthdays_config = config.get("excel_columns", "birthday")
