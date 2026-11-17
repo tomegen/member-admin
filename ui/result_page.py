@@ -1,13 +1,11 @@
-import os
-
 import pandas as pd
-from PySide6.QtCore import QDate, QSettings, QStandardPaths, Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QDate, QSettings, Qt
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDateEdit, QGridLayout, QHBoxLayout, QHeaderView,
-                               QLabel, QMessageBox, QPushButton, QRadioButton, QTableWidget, QTableWidgetItem,
-                               QVBoxLayout, QWidget, QFileDialog)
+                               QLabel, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem,
+                               QVBoxLayout, QWidget)
 
 from logic.export import write_entries_into_xlsx
+from ui.saving import save_file
 from ui.theme import heading, muted, primary_button
 
 
@@ -26,7 +24,7 @@ class DateItem(QTableWidgetItem):
 class ResultSpec:
 
     def __init__(self, title, description, numbers, checkbox_text, occasion, file_stem, finder, txt_writer,
-                 ics_writer=None):
+                 ics_writer):
         self.title = title
         self.description = description
         self.numbers = numbers
@@ -86,12 +84,7 @@ class ResultPage(QWidget):
         layout.addLayout(select_row)
 
         self.checkbox_grid = QGridLayout()
-        for index, number in enumerate(spec.numbers):
-            checkbox = QCheckBox(spec.checkbox_text(number))
-            checkbox.setChecked(True)
-            checkbox.toggled.connect(self.refresh)
-            self.checkboxes.append(checkbox)
-            self.checkbox_grid.addWidget(checkbox, index // 5, index % 5)
+        self.fill_checkboxes()
         layout.addLayout(self.checkbox_grid)
 
         # preview
@@ -107,20 +100,35 @@ class ResultPage(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.table, stretch=1)
 
+        # export options
+        option_row = QHBoxLayout()
+        self.minimal_check = QCheckBox("Nur Name und Anlass (ohne Geburtstag, Telefon, Adresse)")
+        self.minimal_check.setToolTip("Datensparsam, z. B. für die Presse. Gilt für Text- und Excel-Datei.")
+        option_row.addWidget(self.minimal_check)
+        option_row.addSpacing(24)
+        option_row.addWidget(QLabel("Kalender-Erinnerung:"))
+        self.reminder_spin = QSpinBox()
+        self.reminder_spin.setRange(0, 60)
+        self.reminder_spin.setSuffix(" Tage vorher")
+        self.reminder_spin.setSpecialValueText("keine")
+        self.reminder_spin.setToolTip("Erinnerung (9 Uhr) vor jedem Termin in der Kalenderdatei.")
+        self.reminder_spin.setValue(int(QSettings().value("reminder_days", 7)))
+        self.reminder_spin.valueChanged.connect(lambda days: QSettings().setValue("reminder_days", days))
+        option_row.addWidget(self.reminder_spin)
+        option_row.addStretch()
+        layout.addLayout(option_row)
+
         # export
         button_row = QHBoxLayout()
         self.txt_button = primary_button("Als Textdatei speichern")
         self.xlsx_button = primary_button("Als Excel-Datei speichern")
+        self.ics_button = primary_button("Als Kalender (ICS) speichern")
         self.txt_button.clicked.connect(lambda: self.save("txt"))
         self.xlsx_button.clicked.connect(lambda: self.save("xlsx"))
-        button_row.addWidget(self.txt_button)
-        button_row.addWidget(self.xlsx_button)
-        self.export_buttons = [self.txt_button, self.xlsx_button]
-        if spec.ics_writer:
-            self.ics_button = primary_button("Als Kalender (ICS) speichern")
-            self.ics_button.clicked.connect(lambda: self.save("ics"))
-            button_row.addWidget(self.ics_button)
-            self.export_buttons.append(self.ics_button)
+        self.ics_button.clicked.connect(lambda: self.save("ics"))
+        self.export_buttons = [self.txt_button, self.xlsx_button, self.ics_button]
+        for button in self.export_buttons:
+            button_row.addWidget(button)
         button_row.addStretch()
         layout.addLayout(button_row)
 
@@ -129,6 +137,26 @@ class ResultPage(QWidget):
         self.to_edit.dateChanged.connect(self.refresh)
         self.set_year(self.year)
         self.on_range_mode_changed()
+
+    # one checkbox per number (e.g. 60. Geburtstag); numbers in unchecked stay unchecked
+    def fill_checkboxes(self, unchecked=()):
+        self.checkboxes = []
+        for index, number in enumerate(self.spec.numbers):
+            checkbox = QCheckBox(self.spec.checkbox_text(number))
+            checkbox.setChecked(number not in unchecked)
+            checkbox.toggled.connect(self.refresh)
+            self.checkboxes.append(checkbox)
+            self.checkbox_grid.addWidget(checkbox, index // 5, index % 5)
+
+    # the selectable numbers were changed in the settings
+    def set_numbers(self, numbers):
+        unchecked = {number for number, box in zip(self.spec.numbers, self.checkboxes) if not box.isChecked()}
+        for checkbox in self.checkboxes:
+            self.checkbox_grid.removeWidget(checkbox)
+            checkbox.deleteLater()
+        self.spec.numbers = list(numbers)
+        self.fill_checkboxes(unchecked)
+        self.refresh()
 
     @staticmethod
     def make_date_edit():
@@ -210,34 +238,14 @@ class ResultPage(QWidget):
     def write(self, kind, path):
         start, end = self.date_range()
         members, numbers = self.members.members, self.checked_numbers()
+        minimal = self.minimal_check.isChecked()
         if kind == "txt":
-            return self.spec.txt_writer(members, numbers, start, end, path)
+            return self.spec.txt_writer(members, numbers, start, end, path, minimal=minimal)
         if kind == "ics":
-            return self.spec.ics_writer(members, numbers, start, end, path)
-        return write_entries_into_xlsx(self.entries(), self.spec.occasion, path)
+            return self.spec.ics_writer(members, numbers, start, end, path, reminder_days=self.reminder_spin.value())
+        return write_entries_into_xlsx(self.entries(), self.spec.occasion, path, minimal=minimal)
 
     def save(self, kind):
-        settings = QSettings()
-        folder = settings.value("save_dir") or QStandardPaths.writableLocation(
-            QStandardPaths.StandardLocation.DocumentsLocation)
         name = self.spec.file_stem + "_" + str(self.year) + "." + kind
         filters = {"txt": "Textdatei (*.txt)", "xlsx": "Excel-Datei (*.xlsx)", "ics": "Kalenderdatei (*.ics)"}
-        path, _ = QFileDialog.getSaveFileName(self, "Speichern unter", os.path.join(folder, name), filters[kind])
-        if not path:
-            return
-        try:
-            self.write(kind, path)
-        except Exception as error:
-            QMessageBox.critical(self, "Speichern nicht möglich",
-                                 "Die Datei konnte nicht gespeichert werden.\n"
-                                 "Ist sie eventuell noch in einem anderen Programm geöffnet?\n\n" + str(error))
-            return
-        settings.setValue("save_dir", os.path.dirname(path))
-        box = QMessageBox(self)
-        box.setWindowTitle("Datei erstellt")
-        box.setText("Die Datei wurde gespeichert:\n" + path)
-        open_button = box.addButton("Ordner öffnen", QMessageBox.ButtonRole.ActionRole)
-        box.addButton("OK", QMessageBox.ButtonRole.AcceptRole)
-        box.exec()
-        if box.clickedButton() is open_button:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(path)))
+        save_file(self, name, filters[kind], lambda path: self.write(kind, path))

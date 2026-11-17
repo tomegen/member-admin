@@ -2,7 +2,7 @@
 
 Berechnet aus Ihrer Mitgliederliste (Excel) automatisch **runde Geburtstage** und **Ehrungen für langjährige
 Mitgliedschaft** – für ein Jahr oder einen beliebigen Zeitraum. Das Ergebnis können Sie als Text, als Excel-Datei
-oder (bei Geburtstagen) als Kalenderdatei speichern.
+oder als Kalenderdatei speichern. Dazu gibt es eine Übersicht „Demnächst“ und eine Mitgliederstatistik.
 
 Ihre Daten bleiben auf Ihrem Computer. Die Mitgliederliste wird nur gelesen und nie verändert.
 
@@ -22,25 +22,37 @@ registriert; das kostet jährlich Geld. Das Programm ist trotzdem unbedenklich, 
   und bei der Meldung zu „Mitgliederverwaltung“ auf **„Trotzdem öffnen“** klicken. Ab dann startet die App normal.
   (Bei älteren macOS-Versionen geht auch: Rechtsklick auf die App → „Öffnen“.)
 
-Lassen Sie die Datei `config.ini` im selben Ordner wie das Programm (neben der `.exe` bzw. neben der `.app`).
+Die Datei `config.ini` neben dem Programm ist **optional** (nur für Fortgeschrittene, siehe unten).
 
 ## So geht es
 
 1. Programm starten und die **Excel-Mitgliederliste auswählen** (oder die Datei in das Fenster ziehen).
    Beim nächsten Start bietet das Programm die zuletzt benutzte Datei direkt an.
 2. Oben das **Auswertungsjahr** prüfen. Ab Oktober schlägt das Programm automatisch das nächste Jahr vor.
-3. Im Tab **Geburtstage** oder **Ehrungen** sehen Sie sofort die Treffer. Mit den Häkchen wählen Sie, welche
+3. Auf der **Übersicht** steht unter „Demnächst“, wer in den nächsten 30 Tagen Geburtstag oder Jubiläum hat.
+4. Im Tab **Geburtstage** oder **Ehrungen** sehen Sie sofort die Treffer. Mit den Häkchen wählen Sie, welche
    Geburtstage bzw. Jubiläen berücksichtigt werden. Wer nicht ein ganzes Jahr braucht, wählt „Eigener Zeitraum“.
-4. Mit **Als Textdatei / Excel-Datei / Kalender (ICS) speichern** erzeugen Sie die Liste. Die Kalenderdatei
-   lässt sich in Outlook, Apple Kalender oder Google Kalender importieren (Ganztagstermine).
-5. Im Tab **Datenprüfung** steht, welche Einträge in Ihrer Liste unvollständig sind – mit der **Zeilennummer aus
-   Excel**. Diese Personen fehlen sonst in den Auswertungen. Korrigieren Sie sie in Excel, speichern Sie und klicken Sie
+   Welche Zahlen zur Auswahl stehen, ändern Sie oben unter **Einstellungen**.
+5. Mit **Als Textdatei / Excel-Datei / Kalender (ICS) speichern** erzeugen Sie die Liste. Die Kalenderdatei
+   lässt sich in Outlook, Apple Kalender oder Google Kalender importieren (Ganztagstermine, auf Wunsch mit Erinnerung).
+   Mit dem Häkchen **Nur Name und Anlass** enthält die Datei weder Geburtstag noch Telefon oder Adresse –
+   praktisch für die Presse oder zur Weitergabe.
+6. Der Tab **Statistik** zeigt aktive Mitglieder, Neue, Altersgruppen (wie bei Verbandsmeldungen) und das Durchschnittsalter.
+   Die Zahlen lassen sich als Excel-Datei speichern.
+7. Im Tab **Datenprüfung** steht, welche Einträge in Ihrer Liste unvollständig oder auffällig sind (fehlende Daten, unmögliches
+   Alter, Eintritt vor der Geburt, doppelte Einträge) – mit der **Zeilennummer aus Excel**. Fehlende Angaben führen dazu,
+   dass Personen in den Auswertungen fehlen. Korrigieren Sie sie in Excel, speichern Sie und klicken Sie
    oben auf **Neu einlesen**.
 
 ## Die Excel-Liste
 
 In der ersten Zeile stehen die Spaltenüberschriften, darunter je Zeile ein Mitglied. Die Beispieldatei
 `example_file.xlsx` zeigt den Aufbau. Die Spalten dürfen in beliebiger Reihenfolge stehen, weitere Spalten werden ignoriert.
+Das Programm erkennt die Spalten an der Überschrift, auch bei üblichen anderen Schreibweisen (z. B. „Nachname“,
+„Geburtsdatum“, „Eintritt“, „Aktiv“, „Handy“).
+
+**Noch keine Liste?** Auf der Startseite gibt es **„Leere Excel-Vorlage speichern“**: mit Auswahlfeld für „Mitglied“
+(1/0), Datumsprüfung und farblich markierten Pflichtspalten.
 
 | Spalte | Pflicht? | Hinweis |
 |---|---|---|
@@ -60,13 +72,15 @@ Leere Zeilen werden übersprungen. Ob die Liste nur am PC oder auch auf dem Smar
 - **Ehrung:** Wer im gewählten Zeitraum z. B. 25 Jahre Mitglied wird (Datum „Mitglied seit“ plus Jahre).
 - Fehlt der Geburtstag oder „Mitglied seit“, erscheint die Person in der Datenprüfung und in der jeweiligen Auswertung nicht.
 
-## Einstellungen (`config.ini`)
+## Einstellungen
 
-- `[birthday] possibilities` und `[honor] possibilities`: welche Geburtstage bzw. Jubiläumsjahre zur Auswahl stehen.
-- `[excel_columns]`: Name der jeweiligen Spalte in Ihrer Excel-Liste. Heißt Ihre Spalte anders, tragen Sie den
-  Namen hier ein (genau wie in Zeile 1 der Excel-Datei).
+Unter **Einstellungen** (oben im Programm) legen Sie fest, welche Geburtstage und Jubiläumsjahre zur Auswahl stehen.
+Die Auswahl wird gespeichert; „Standard wiederherstellen“ setzt sie zurück.
 
-Die Datei ist ein einfacher Text; öffnen Sie sie mit dem Editor.
+Für Fortgeschrittene gibt es die optionale Textdatei `config.ini` (neben dem Programm):
+- `[birthday] possibilities` und `[honor] possibilities`: Standardwerte für die Auswahl.
+- `[excel_columns]`: bevorzugter Spaltenname. Das Programm erkennt Spalten auch ohne diese Datei; sie hilft nur, wenn
+  Ihre Überschrift ungewöhnlich heißt.
 
 ---
 

@@ -6,16 +6,22 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QSpinBox,
                                QStackedWidget, QTabWidget, QVBoxLayout, QWidget)
 
+from config.config import parse_numbers
 from logic.birthday_calculation import find_birthdays, write_birthdays_into_ics, write_birthdays_into_txt
-from logic.honor_calculation import find_honors, write_honors_into_txt
+from logic.honor_calculation import find_honors, write_honors_into_ics, write_honors_into_txt
+from logic.template import write_member_template
+from logic.upcoming import birthday_occasion, honor_occasion
 from model.members import MemberListError, Members
 from ui.issues_page import IssuesPage
 from ui.overview_page import OverviewPage
 from ui.result_page import ResultPage, ResultSpec
+from ui.saving import save_file
+from ui.settings_dialog import SettingsDialog
+from ui.statistics_page import StatisticsPage
 from ui.theme import secondary_button
 from ui.welcome_page import WelcomePage
 
-TAB_OVERVIEW, TAB_BIRTHDAYS, TAB_HONORS, TAB_ISSUES = range(4)
+TAB_OVERVIEW, TAB_BIRTHDAYS, TAB_HONORS, TAB_STATISTICS, TAB_ISSUES = range(5)
 
 
 # the evaluation is usually done for the coming year in the last months of a year
@@ -29,6 +35,10 @@ class MainWindow(QMainWindow):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        # the numbers from config.ini are the defaults; what was chosen in the settings wins
+        self.default_birthdays = list(config.birthday_config)
+        self.default_honors = list(config.honor_config)
+        self.apply_saved_numbers()
         self.members = None
         self.filename = None
         self.setWindowTitle("Mitglieder Management Portal")
@@ -41,6 +51,7 @@ class MainWindow(QMainWindow):
         self.welcome = WelcomePage()
         self.welcome.open_requested.connect(self.choose_file)
         self.welcome.recent_requested.connect(self.load_file)
+        self.welcome.template_requested.connect(self.save_template)
         self.welcome.set_recent(QSettings().value("last_file"))
         self.stack.addWidget(self.welcome)
 
@@ -74,43 +85,52 @@ class MainWindow(QMainWindow):
         reload_button.clicked.connect(self.reload)
         other_button = secondary_button("Andere Datei …")
         other_button.clicked.connect(self.choose_file)
+        settings_button = secondary_button("Einstellungen")
+        settings_button.clicked.connect(self.open_settings)
         header.addWidget(reload_button)
         header.addWidget(other_button)
+        header.addWidget(settings_button)
         layout.addLayout(header)
 
         self.overview = OverviewPage()
         self.overview.open_tab.connect(lambda index: self.tabs.setCurrentIndex(index))
         self.birthdays = ResultPage(ResultSpec(
             title="Geburtstage",
-            description="Runde Geburtstage im gewählten Zeitraum. Die Auswahl der Geburtstage steht in der config.ini.",
+            description="Runde Geburtstage im gewählten Zeitraum. Welche Geburtstage zur Auswahl stehen, "
+                        "ändern Sie unter „Einstellungen“.",
             numbers=self.config.birthday_config,
-            checkbox_text=lambda n: str(n) + ". Geburtstag",
-            occasion=lambda n: str(n) + ". Geburtstag",
+            checkbox_text=birthday_occasion,
+            occasion=birthday_occasion,
             file_stem="Geburtstage",
             finder=find_birthdays,
             txt_writer=write_birthdays_into_txt,
             ics_writer=write_birthdays_into_ics))
         self.honors = ResultPage(ResultSpec(
             title="Ehrungen",
-            description="Mitglieder mit rundem Jubiläum im gewählten Zeitraum. Die Auswahl der Jahre steht in der config.ini.",
+            description="Mitglieder mit rundem Jubiläum im gewählten Zeitraum. Welche Jahre zur Auswahl "
+                        "stehen, ändern Sie unter „Einstellungen“.",
             numbers=self.config.honor_config,
             checkbox_text=lambda n: str(n) + " Jahre",
-            occasion=lambda n: str(n) + " Jahre Mitgliedschaft",
+            occasion=honor_occasion,
             file_stem="Ehrungen",
             finder=find_honors,
-            txt_writer=write_honors_into_txt))
+            txt_writer=write_honors_into_txt,
+            ics_writer=write_honors_into_ics))
+        self.statistics_page = StatisticsPage()
         self.issues = IssuesPage()
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self.overview, "Übersicht")
         self.tabs.addTab(self.birthdays, "Geburtstage")
         self.tabs.addTab(self.honors, "Ehrungen")
+        self.tabs.addTab(self.statistics_page, "Statistik")
         self.tabs.addTab(self.issues, "Datenprüfung")
         layout.addWidget(self.tabs)
 
         # the pages start with the year shown in the header
         self.birthdays.set_year(self.year_spin.value())
         self.honors.set_year(self.year_spin.value())
+        self.statistics_page.set_year(self.year_spin.value())
         return view
 
     # --- loading -----------------------------------------------------------------------------------------------
@@ -149,8 +169,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Mitglieder Management Portal – " + os.path.basename(path))
         self.birthdays.set_members(members)
         self.honors.set_members(members)
+        self.statistics_page.set_members(members)
         self.issues.set_members(members)
-        self.overview.refresh(members, self.year_spin.value())
+        self.refresh_overview()
         self.update_issue_tab()
         self.stack.setCurrentWidget(self.view)
         return True
@@ -163,8 +184,50 @@ class MainWindow(QMainWindow):
     def on_year_changed(self, year):
         self.birthdays.set_year(year)
         self.honors.set_year(year)
+        self.statistics_page.set_year(year)
+        self.refresh_overview()
+
+    def refresh_overview(self):
         if self.members is not None:
-            self.overview.refresh(self.members, year)
+            self.overview.refresh(self.members, self.year_spin.value(), self.config.birthday_config,
+                                  self.config.honor_config)
+
+    # --- settings and template ---------------------------------------------------------------------------------
+
+    def apply_saved_numbers(self):
+        settings = QSettings()
+        for key, attribute in (("birthday_numbers", "birthday_config"), ("honor_numbers", "honor_config")):
+            text = settings.value(key)
+            if text:
+                try:
+                    setattr(self.config, attribute, parse_numbers(text))
+                except ValueError:
+                    settings.remove(key)
+
+    def open_settings(self):
+        dialog = SettingsDialog(self.config.birthday_config, self.config.honor_config, self.default_birthdays,
+                                self.default_honors, self)
+        if not dialog.exec():
+            return
+        self.set_numbers(dialog.birthdays, dialog.honors)
+
+    # remember the selectable numbers (nothing is stored when they are the defaults) and show them
+    def set_numbers(self, birthdays, honors):
+        settings = QSettings()
+        for key, numbers, default in (("birthday_numbers", birthdays, self.default_birthdays),
+                                      ("honor_numbers", honors, self.default_honors)):
+            if numbers == default:
+                settings.remove(key)
+            else:
+                settings.setValue(key, ", ".join(str(number) for number in numbers))
+        self.config.birthday_config, self.config.honor_config = list(birthdays), list(honors)
+        self.birthdays.set_numbers(birthdays)
+        self.honors.set_numbers(honors)
+        self.refresh_overview()
+
+    def save_template(self):
+        save_file(self, "Mitgliederliste_Vorlage.xlsx", "Excel-Datei (*.xlsx)",
+                  lambda path: write_member_template(path, self.config))
 
     # --- drag and drop of an excel file -------------------------------------------------------------------------
 

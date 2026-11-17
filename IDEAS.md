@@ -1,16 +1,16 @@
 # Ideen für das Mitglieder Management Portal
 
-Stand 2026-11-14. Sortiert nach Empfehlung. Aufwand: S = Stunden, M = ein bis wenige Tage, L = Wochenende+.
+Stand 2026-11-14. Sortiert nach Empfehlung. **Umgesetzt (noch nicht committet/veröffentlicht): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16.** Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt) und 24 (braucht einen Push). Aufwand: S = Stunden, M = ein bis wenige Tage, L = Wochenende+.
 „Beleg“ nennt, woran ich die Idee in der echten Mitgliederliste (nur Zähler) oder im Code festmache.
 
 ## Daten und Excel (Fehler an der Quelle vermeiden)
 
 | # | Idee | Nutzen | Aufwand | Beleg / Hinweis |
 |---|---|---|---|---|
-| 1 | **Excel-Vorlage** mit Dropdown für „Mitglied“ (1/0), Datumsformat, Pflichtspalten farbig; Link in der App | Fehler entstehen gar nicht erst | S | In der echten Liste: 7 aktive Mitglieder mit Lücken, 7 Zellen mit Zahl statt Datum |
-| 2 | **Spalten automatisch erkennen** (Nachname/Name, Geburtsdatum/Geburtstag …) statt `config.ini` | Nachfolger müssen keine Textdatei bearbeiten | M | Die `config.ini` ist die größte Hürde für Laien |
-| 3 | **Einstellungen in der App** (Auswahl der Geburtstage/Jubiläen, Spaltennamen) | wie 2, ersetzt `config.ini` komplett | M | gemeinsam mit 2 umsetzen |
-| 4 | **Datenprüfung erweitern:** Dubletten, Eintritt vor Geburt/in der Zukunft, unplausibles Alter, PLZ/IBAN-Format | findet Fehler, die heute niemand sieht | S–M | In der echten Liste: 2 mögliche Dubletten (Name + Vorname), evtl. Familien, daher nur als Hinweis |
+| 1 | ✅ **Excel-Vorlage** mit Dropdown für „Mitglied“ (1/0), Datumsformat, Pflichtspalten farbig; Link in der App | Fehler entstehen gar nicht erst | S | In der echten Liste: 7 aktive Mitglieder mit Lücken, 7 Zellen mit Zahl statt Datum |
+| 2 | ✅ **Spalten automatisch erkennen** (Nachname/Name, Geburtsdatum/Geburtstag …) statt `config.ini` | Nachfolger müssen keine Textdatei bearbeiten | M | Die `config.ini` ist die größte Hürde für Laien |
+| 3 | ✅ **Einstellungen in der App** (Auswahl der Geburtstage/Jubiläen, Spaltennamen) | wie 2, ersetzt `config.ini` komplett | M | gemeinsam mit 2 umsetzen |
+| 4 | ✅ **Datenprüfung erweitern:** Dubletten (Name **und** Geburtstag), Eintritt vor Geburt/weit in der Zukunft, unplausibles Alter. IBAN/PLZ bewusst nicht: die Spalte „IBAN“ enthält in der echten Liste nur Zahlen | findet Fehler, die heute niemand sieht | S–M | In der echten Liste: 2 mögliche Dubletten (Name + Vorname), evtl. Familien, daher nur als Hinweis |
 | 5 | **Passwortgeschützte Excel** öffnen (Passwortabfrage) | Mitgliederlisten sind sensibel, Vereine schützen sie oft | M | `msoffcrypto-tool`; heute kommt nur „Datei nicht lesbar“ |
 | 6 | **Austrittsdatum** statt nur 0/1 | Mitgliederentwicklung, Austritte pro Jahr | M | 27 von 218 Zeilen sind „Mitglied = 0“, der Zeitpunkt ist unbekannt |
 | 7 | Blattauswahl, Kopfzeile nicht in Zeile 1 erkennen | robuster bei anderen Listen | S | heute wird nur das erste Blatt gelesen |
@@ -19,8 +19,8 @@ Stand 2026-11-14. Sortiert nach Empfehlung. Aufwand: S = Stunden, M = ein bis we
 
 | # | Idee | Nutzen | Aufwand | Beleg / Hinweis |
 |---|---|---|---|---|
-| 8 | **Startseite „Demnächst“:** Geburtstage und Ehrungen der nächsten 30 Tage | Tool wird laufend nützlich, nicht nur einmal im Jahr | S | nutzt vorhandene Logik |
-| 9 | **Mitgliederstatistik / Jahresbericht:** Zu- und Abgänge, Altersgruppen, Durchschnittsalter | Zahlen für Mitgliederversammlung und Verbandsmeldung | M | Altersgruppen wie Verbände sie verlangen, konfigurierbar |
+| 8 | ✅ **Startseite „Demnächst“:** Geburtstage und Ehrungen der nächsten 30 Tage | Tool wird laufend nützlich, nicht nur einmal im Jahr | S | nutzt vorhandene Logik |
+| 9 | ✅ **Mitgliederstatistik / Jahresbericht:** Zu- und Abgänge, Altersgruppen, Durchschnittsalter | Zahlen für Mitgliederversammlung und Verbandsmeldung | M | Altersgruppen wie Verbände sie verlangen, konfigurierbar |
 | 10 | **Überfällige Ehrungen:** Jubiläen der letzten Jahre, die noch nicht geehrt wurden | nichts wird vergessen | S–M | geht heute nur über „Eigener Zeitraum“; besser mit Spalte „zuletzt geehrt“ in der Excel |
 | 11 | **Beitragsklassen-Wechsel:** wer wird dieses Jahr 18 (Jugend → Erwachsene) | Beitrag stimmt automatisch | S | 18. Geburtstag ist bereits auswählbar; nur sinnvoll, wenn der Verein so abrechnet |
 | 12 | Alle Geburtstage eines Monats (nicht nur runde) | Gratulationsliste für Vorstand/Presse | S | Auswahl 1.–110. statt der Liste in `config.ini` |
@@ -30,7 +30,7 @@ Stand 2026-11-14. Sortiert nach Empfehlung. Aufwand: S = Stunden, M = ein bis we
 | # | Idee | Nutzen | Aufwand | Beleg / Hinweis |
 |---|---|---|---|---|
 | 13 | **Urkunden und Serienbriefe** aus Word-Vorlage (Platzhalter für Name, Jahre, Datum) | größte Zeitersparnis bei Ehrungen | M–L | `python-docx`; Vorlage vom Verein |
-| 14 | **Export ohne Adresse/Telefon** (nur Name + Anlass) | datensparsam für Presse und Weitergabe (DSGVO) | S | Schalter beim Speichern |
+| 14 | ✅ **Export ohne Adresse/Telefon** (nur Name + Anlass) | datensparsam für Presse und Weitergabe (DSGVO) | S | Schalter beim Speichern |
 | 15 | **Schöne PDF-Liste** für die Vorstandssitzung | statt TXT/Excel direkt druckbar | M | Qt kann PDF drucken |
 | 16 | ICS mit **Erinnerung** (z. B. 1 Woche vorher) und ICS auch für Ehrungen | Termine werden nicht verpasst | S | `VALARM` im Kalender-Export |
 
@@ -55,7 +55,8 @@ Stand 2026-11-14. Sortiert nach Empfehlung. Aufwand: S = Stunden, M = ein bis we
 
 ## Meine Reihenfolge
 
-1. 24 (Pipeline prüfen), dann ein erstes Release.
-2. 1, 2, 3 (Vorlage, Spalten erkennen, Einstellungen in der App): macht das Tool für Nachfolger wirklich einfach.
-3. 8, 9, 16, 14: schnelle Gewinne.
-4. 13 (Urkunden): größter Nutzen bei Ehrungen, braucht eine Vorlage vom Verein.
+1. 24 (Pipeline prüfen), dann ein erstes Release. **Als Nächstes sinnvoll.**
+2. ✅ 1, 2, 3 (Vorlage, Spalten erkennen, Einstellungen in der App).
+3. ✅ 8, 9, 16, 14.
+4. 13 (Urkunden): größter Nutzen bei Ehrungen, braucht eine Vorlage vom Verein; zurückgestellt.
+5. Offen und klein: 10 (überfällige Ehrungen), 12, 17 (Hilfe), 18, 20.

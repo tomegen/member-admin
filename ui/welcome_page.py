@@ -1,7 +1,7 @@
 import os
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 from ui.theme import heading, muted, primary_button, secondary_button
 
@@ -9,6 +9,7 @@ from ui.theme import heading, muted, primary_button, secondary_button
 class WelcomePage(QWidget):
     open_requested = Signal()
     recent_requested = Signal(str)
+    template_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -42,6 +43,13 @@ class WelcomePage(QWidget):
         self.recent_button.hide()
         self.recent_path = ""
         layout.addWidget(self.recent_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        layout.addSpacing(12)
+        template_button = QPushButton("Noch keine Liste? Leere Excel-Vorlage speichern …")
+        template_button.setObjectName("link")
+        template_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        template_button.clicked.connect(self.template_requested.emit)
+        layout.addWidget(template_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     # offer the file that was used the last time
     def set_recent(self, path):

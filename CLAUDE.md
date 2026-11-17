@@ -9,27 +9,36 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 ## Was die App kann
 - Start: Excel wählen (Dialog, Drag & Drop oder „Zuletzt verwendet“); `.xlsx`/`.xls`, erstes Blatt, Kopfzeile = Spaltennamen.
 - **Auswertungsjahr** im Kopf (Standard: ab Oktober das Folgejahr). Es steuert Geburtstage, Ehrungen, „Neue Mitglieder“.
-- Tabs: Übersicht · Geburtstage · Ehrungen · Datenprüfung.
-- Geburtstage/Ehrungen: ganzes Jahr oder eigener Zeitraum, Auswahl der runden Zahlen (aus `config.ini`),
-  **Vorschau-Tabelle** (sortierbar), Export als TXT, Excel (XLSX), bei Geburtstagen zusätzlich ICS (Ganztagstermine, stabile UIDs).
+- Tabs: Übersicht (mit „Demnächst“: nächste 30 Tage) · Geburtstage · Ehrungen · Statistik · Datenprüfung.
+- **Einstellungen** (Knopf im Kopf): Auswahl der Geburtstage/Jubiläen, gespeichert in `QSettings`; `config.ini` liefert nur die Standardwerte.
+- Geburtstage/Ehrungen: ganzes Jahr oder eigener Zeitraum, Auswahl der runden Zahlen,
+  **Vorschau-Tabelle** (sortierbar), Export als TXT, Excel (XLSX) und ICS (Ganztagstermine, stabile UIDs, Erinnerung n Tage vorher),
+  Option „Nur Name und Anlass“ (datensparsam, für TXT/XLSX).
 - Datenprüfung: alle unvollständigen Zeilen mit **Excel-Zeilennummer** (fehlender Geburtstag/„Mitglied seit“,
-  ungültiger Mitglied-Status, nicht lesbares Datum); Standard nur aktive Mitglieder. „Neu einlesen“ nach Korrektur in Excel.
+  ungültiger Mitglied-Status, nicht lesbares Datum, Alter unplausibel, Eintritt vor Geburt/weit in der Zukunft,
+  mögliche Dublette = gleicher Name **und** Geburtstag); Standard nur aktive Mitglieder. „Neu einlesen“ nach Korrektur in Excel.
+- Statistik: aktive Mitglieder, Neue, Altersgruppen (Verbandsgruppen bis 6/7–14/15–18/19–26/27–40/41–60/über 60), Durchschnittsalter, Export XLSX.
+- **Spalten werden an der Überschrift erkannt** (übliche Schreibweisen, `model/columns.py`; der Name aus `config.ini` hat Vorrang).
+- Startseite: „Leere Excel-Vorlage speichern“ (Dropdown für Mitglied 1/0, Datumsprüfung, Pflichtspalten blau).
 - Nur Mitglieder mit `Mitglied = 1` zählen.
 
 ## Aufbau
 | Pfad | Zweck |
 |---|---|
 | `mitgliederverwaltung.py` | Einstieg (`main`), `--smoke-test <excel>` für den Build (lädt Datei, schreibt alle Exporte, Exit 0/2) |
-| `config/config.py` | `Config`, `ConfigError`; `config.ini` neben EXE/`.app`, sonst eingebaute Vorlage, sonst Projektordner |
-| `config.ini` | Auswahllisten (Geburtstage/Ehrungen) + Excel-Spaltennamen |
+| `config/config.py` | `Config`, `ConfigError`, `parse_numbers`; `config.ini` neben EXE/`.app`, sonst eingebaute Vorlage, sonst Projektordner, sonst `DEFAULTS` (Datei ist optional) |
+| `config.ini` | Standardwerte: Auswahllisten (Geburtstage/Ehrungen) + bevorzugte Excel-Spaltennamen |
 | `model/members.py` | Excel → `Member`-Liste, `Issue`-Liste (Datenprüfung), `parse_date`, `MemberListError`, Zähler |
+| `model/columns.py`, `model/checks.py`, `model/issue.py` | Spaltenerkennung (`FIELDS`, `detect_columns`), Plausibilitätsprüfungen (`age_on`), `Issue` |
 | `model/member.py`, `model/entry.py` | Datenklassen (`Member`, `Entry` = Treffer mit Zahl, Mitglied, Datum) |
 | `logic/date_utils.py` | `shift_years` (29.02. → 28.02. in Nicht-Schaltjahren) |
 | `logic/birthday_calculation.py`, `logic/honor_calculation.py` | `find_*`, `is_*`, TXT-/ICS-Export |
-| `logic/export.py` | XLSX-Export, Tabellenzeilen |
+| `logic/export.py`, `logic/calendar_export.py` | XLSX-Export (auch `minimal`), ICS-Export (ein Writer für Geburtstage und Ehrungen, `VALARM`) |
+| `logic/upcoming.py`, `logic/statistics.py`, `logic/template.py` | „Demnächst“, Statistik, leere Excel-Vorlage |
 | `ui/main_window.py` | Hauptfenster, Laden, Jahr, Drag & Drop (`show_error` überschreibbar für Tests) |
 | `ui/result_page.py` | **eine** Seite für Geburtstage und Ehrungen (`ResultSpec`), Vorschau, Speichern |
-| `ui/overview_page.py`, `ui/issues_page.py`, `ui/welcome_page.py`, `ui/theme.py` | Übersicht, Datenprüfung, Startseite, Stil |
+| `ui/overview_page.py`, `ui/statistics_page.py`, `ui/issues_page.py`, `ui/welcome_page.py`, `ui/theme.py` | Übersicht, Statistik, Datenprüfung, Startseite, Stil |
+| `ui/settings_dialog.py`, `ui/saving.py` | Einstellungen (Zahlenlisten), gemeinsamer „Speichern unter“-Ablauf |
 | `tests/test_regressions.py`, `tests/test_ui.py` | Tests (Logik/Modell; Oberfläche offscreen) |
 | `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/*.zip` (Windows-EXE, macOS-App) |
 | `example_file.xlsx` | Beispielliste mit den erwarteten Spalten (Fake-Daten) |
@@ -61,11 +70,13 @@ Ehrung n analog mit „Mitglied seit“.
 - Geburtstag am **29.02.** wird in Nicht-Schaltjahren am **28.02.** gefeiert (`shift_years`; Zeitraumgrenzen, ICS, Ehrungen).
 - Datumsspalten in Excel: echte Daten; **Zahlen = Excel-Seriennummer** (28353 = 16.08.1977; pandas würde sie sonst als 1970 lesen);
   ISO-Text (`1967-06-01`) bleibt ISO, deutscher Text (`13.02.1970`) wird tag-zuerst gelesen (`dayfirst=True` allein vertauscht ISO!).
-- Pflichtspalten fehlen → `MemberListError` mit Spaltennamen. Alle anderen Spalten sind optional. Leere Zeilen werden übersprungen.
+- Spalten: Erkennung über Überschrift (normalisiert: Groß-/Kleinschreibung, Leer-/Sonderzeichen, ß/Umlaute egal). Eine Spalte gehört zu genau einem Feld.
+- Pflichtspalten fehlen → `MemberListError` mit fehlenden Namen **und** den gefundenen Überschriften. Alle anderen Spalten sind optional. Leere Zeilen werden übersprungen.
 - Fehlende Daten erzeugen keine Dialoge, sondern `Issue`s (Datenprüfung); fehlendes Datum = `NaT`, Person wird übersprungen.
 - Leerer/ungültiger „Mitglied“-Wert → Hinweis, Mitglied zählt nicht.
 - TXT: UTF-8, `newline=""` (sonst `\r\r\n` unter Windows). Keine Personendaten in `print`/Logs.
-- ICS: Ganztagstermine, UID aus Name+Datum+Zahl (erneuter Import erzeugt keine Dubletten).
+- ICS: Ganztagstermine, UID aus Name+Datum+Zahl (erneuter Import erzeugt keine Dubletten; Ehrungen mit Präfix `honor|`). Erinnerung = 9 Uhr, n Tage vorher.
+- Keine IBAN-Prüfung: in der echten Liste enthält die Spalte „IBAN“ reine Zahlen (Prüfziffer würde fast jede Zeile melden).
 - Build schreibt nach `release/` (nicht `dist/`/`build/`: dort liegen alte Windows-Artefakte, `Mitgliederverwaltung` kollidiert auf macOS mit `mitgliederverwaltung`).
 
 ## Verteilung / offene Punkte (Stand 2026-11-14)
@@ -75,7 +86,7 @@ Ehrung n analog mit „Mitglied seit“.
 - Ideenliste mit Priorisierung: `IDEAS.md`.
 - macOS-Build nur Apple Silicon (`macos-latest`); Intel-Macs bräuchten einen eigenen Runner.
 - Workflow `release.yml` ist **nicht auf GitHub getestet** (nur lokal gebaut/Smoke-Test auf macOS, YAML geprüft). Windows-Build ungeprüft.
-- Ideen: Excel-Vorlage mit Dropdown für „Mitglied“, Spalten automatisch erkennen statt `config.ini`, PWA/Web-Variante für Smartphone.
+- Umgesetzt, aber noch **nicht committet/gepusht/veröffentlicht** (Stand 2026-11-14): Ideen 1, 2, 3, 4, 8, 9, 14, 16 aus `IDEAS.md`. Offen u. a. PWA/Web-Variante für Smartphone.
 
 ## Neuer Chat — so einsteigen
 1. `git status` und `git fetch` prüfen, bevor etwas geändert wird.

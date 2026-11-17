@@ -5,7 +5,13 @@ Stand: 14.11.2026 (noch nicht veröffentlicht) <br/><br>
 Neue Oberfläche (Qt statt Tk), läuft als Windows-EXE und als Mac-App. <br>
 Auswertungsjahr wählbar, Vorschau der Ergebnisse vor dem Speichern. <br>
 Neu: Export als Excel-Datei, Kalenderdatei (ICS) mit Ganztagsterminen. <br>
-Neu: Datenprüfung mit Excel-Zeilennummern statt vieler Warnfenster. <br>
+Neu: Datenprüfung mit Excel-Zeilennummern statt vieler Warnfenster; prüft auch Alter, Eintritt vor Geburt und doppelte Einträge. <br>
+Neu: Übersicht „Demnächst“ (nächste 30 Tage), Tab „Statistik“ (Altersgruppen, Durchschnittsalter, Excel-Export). <br>
+Neu: Einstellungen im Programm (Auswahl der Geburtstage/Jubiläen); `config.ini` ist optional. <br>
+Neu: Spalten werden an der Überschrift erkannt („Nachname“, „Geburtsdatum“, „Eintritt“ …). <br>
+Neu: Leere Excel-Vorlage mit Auswahlfeld und Datumsprüfung (Startseite). <br>
+Neu: Kalenderdatei auch für Ehrungen, mit Erinnerung (z. B. 7 Tage vorher). <br>
+Neu: „Nur Name und Anlass“ für datensparsame Text-/Excel-Dateien. <br>
 Neu: Excel-Datei per Drag & Drop, „Neu einlesen“, zuletzt benutzte Datei merken. <br><br>
 
 Fehlerbehebungen: <br>

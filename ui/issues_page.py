@@ -22,9 +22,9 @@ class IssuesPage(QWidget):
         layout.setContentsMargins(30, 24, 30, 24)
         layout.setSpacing(12)
         layout.addWidget(heading("Datenprüfung"))
-        layout.addWidget(muted("Diese Einträge in Ihrer Mitgliederliste sind unvollständig. Betroffene Personen "
-                               "fehlen in den Auswertungen. Bitte in Excel ergänzen, speichern und oben auf "
-                               "„Neu einlesen“ klicken."))
+        layout.addWidget(muted("Diese Einträge in Ihrer Mitgliederliste sind unvollständig oder auffällig. "
+                               "Fehlende Angaben führen dazu, dass Personen in den Auswertungen fehlen. Bitte in "
+                               "Excel korrigieren, speichern und oben auf „Neu einlesen“ klicken."))
 
         self.only_active = QCheckBox("Nur aktive Mitglieder anzeigen")
         self.only_active.setChecked(True)
