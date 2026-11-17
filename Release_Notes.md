@@ -1,6 +1,6 @@
 
 # Version 0.1.0
-Stand: 14.11.2026 (noch nicht veröffentlicht) <br/><br>
+Release Date: 17.11.2026 <br/><br>
 
 Neue Oberfläche (Qt statt Tk), läuft als Windows-EXE und als Mac-App. <br>
 Neu: Download-Seite (tomegen.github.io/member-admin), Windows-Installer (ohne Administratorrechte, mit Desktop-Symbol) und Mac-Disk-Image (in „Programme“ ziehen). <br>
