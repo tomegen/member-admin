@@ -25,7 +25,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 ## Aufbau
 | Pfad | Zweck |
 |---|---|
-| `mitgliederverwaltung.py` | Einstieg (`main`), `--smoke-test <excel>` für den Build (lädt Datei, schreibt alle Exporte, Exit 0/2) |
+| `mitgliederverwaltung.py` | Einstieg (`main`), `--smoke-test <excel>` für den Build (lädt Datei, schreibt alle Exporte, Exit 0/2), `--screenshots=<ordner> <excel>` (Bild je Tab); beide mit eigenen, leeren `QSettings` |
 | `config/config.py` | `Config`, `ConfigError`, `parse_numbers`; `config.ini` neben EXE/`.app`, sonst eingebaute Vorlage, sonst Projektordner, sonst `DEFAULTS` (Datei ist optional) |
 | `config.ini` | Standardwerte: Auswahllisten (Geburtstage/Ehrungen) + bevorzugte Excel-Spaltennamen |
 | `model/members.py` | Excel → `Member`-Liste, `Issue`-Liste (Datenprüfung), `parse_date`, `MemberListError`, Zähler |
@@ -40,7 +40,9 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `ui/overview_page.py`, `ui/statistics_page.py`, `ui/issues_page.py`, `ui/welcome_page.py`, `ui/theme.py` | Übersicht, Statistik, Datenprüfung, Startseite, Stil |
 | `ui/settings_dialog.py`, `ui/saving.py` | Einstellungen (Zahlenlisten), gemeinsamer „Speichern unter“-Ablauf |
 | `tests/test_regressions.py`, `tests/test_ui.py` | Tests (Logik/Modell; Oberfläche offscreen) |
-| `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/*.zip` (Windows-EXE, macOS-App) |
+| `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/` (Windows: `-Windows-Setup.exe` + `-Windows.zip`, macOS: `-Mac.dmg`; Dateinamen ohne Version) |
+| `installer/windows.iss` | Inno-Setup-Skript (Installation pro Benutzer ohne Admin, `AppId` nie ändern) |
+| `docs/` | Download-Seite für GitHub Pages (`index.html`, `start.png`, `qr-download.svg`), verlinkt `releases/latest/download/…` |
 | `example_file.xlsx` | Beispielliste mit den erwarteten Spalten (Fake-Daten) |
 
 Berechnung: Geburtstag n im Zeitraum, wenn das Geburtsdatum zwischen `von − n Jahre` und `bis − n Jahre` liegt.
@@ -52,7 +54,7 @@ Ehrung n analog mit „Mitglied seit“.
 - Start: `.venv/bin/python mitgliederverwaltung.py [excel]`
 - Tests: `.venv/bin/python tests/test_regressions.py` und `.venv/bin/python tests/test_ui.py`
   (Oberfläche läuft mit `QT_QPA_PLATFORM=offscreen`, auch für Screenshots per `widget.grab().save(...)`).
-- Build lokal: `.venv/bin/python build.py <version>` → `release/` (ignoriert). Danach gepackte App prüfen:
+- Build lokal: `.venv/bin/python build.py <version>` → `release/` (ignoriert; Mac-DMG; Windows-Installer nur mit Inno Setup 6). Danach gepackte App prüfen:
   `QT_QPA_PLATFORM=offscreen release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung --smoke-test example_file.xlsx`
 - Scratch-Skripte nie `inspect.py`, `json.py` o. Ä. nennen (überdecken die Standardbibliothek).
 
@@ -79,14 +81,19 @@ Ehrung n analog mit „Mitglied seit“.
 - Keine IBAN-Prüfung: in der echten Liste enthält die Spalte „IBAN“ reine Zahlen (Prüfziffer würde fast jede Zeile melden).
 - Build schreibt nach `release/` (nicht `dist/`/`build/`: dort liegen alte Windows-Artefakte, `Mitgliederverwaltung` kollidiert auf macOS mit `mitgliederverwaltung`).
 
-## Verteilung / offene Punkte (Stand 2026-11-14)
+## Verteilung / offene Punkte (Stand 2026-11-17)
 - **Unsigniert:** Windows zeigt SmartScreen, macOS-Gatekeeper lehnt die App ab (`spctl: rejected`, geprüft). README erklärt das Öffnen.
   Echte Lösung wäre Apple Developer ID + Notarisierung und eine Windows-Signatur (kostet Geld).
   **Entscheidung Thomas (2026-11-14): vorerst nicht signieren.** Nicht erneut vorschlagen, außer er fragt danach.
 - Ideenliste mit Priorisierung: `IDEAS.md`.
-- macOS-Build nur Apple Silicon (`macos-latest`); Intel-Macs bräuchten einen eigenen Runner.
-- Workflow `release.yml` ist **nicht auf GitHub getestet** (nur lokal gebaut/Smoke-Test auf macOS, YAML geprüft). Windows-Build ungeprüft.
-- Umgesetzt, aber noch **nicht committet/gepusht/veröffentlicht** (Stand 2026-11-14): Ideen 1, 2, 3, 4, 8, 9, 14, 16 aus `IDEAS.md`. Offen u. a. PWA/Web-Variante für Smartphone.
+- macOS-Build nur Apple Silicon (`macos-latest`). **Entscheidung Thomas (2026-11-17): Intel-Mac nicht nötig.**
+- Workflow `release.yml` lief auf GitHub grün (2026-11-17, Commit `1921be0`: Windows + macOS, Tests + Smoke-Test); der Release-Job (Workflow-Dispatch) ist noch nicht gelaufen.
+- Download (Installer, DMG, feste Dateinamen, Download-Seite `docs/`, CI-Screenshots) umgesetzt am 2026-11-17, **noch nicht committet, auf GitHub ungetestet**.
+  Lokal geprüft: Mac-DMG gebaut, App aus dem DMG mit Smoke-Test und Screenshots. Windows-Installer nur über CI prüfbar.
+  GitHub Pages muss einmalig aktiviert werden (Settings → Pages → `main` / `/docs`); die Links funktionieren erst ab dem ersten Release mit den neuen Dateinamen.
+- Windows lokal testen (Docker/VM): **laut Thomas nicht nötig** (Mac-Docker kann keine Windows-Container); Windows-Prüfung über CI.
+- Ideen 1, 2, 3, 4, 8, 9, 14, 16 aus `IDEAS.md` sind committet und gepusht, aber noch **nicht als Release veröffentlicht** (letztes Release 0.0.3 von 2024).
+- Mitglieder in der App bearbeiten, Standard-Schema, Dateien je Mitglied (`IDEAS.md` 31–36) und 37–49 sind **nur notiert**. 31–36 würden die Festlegung „App schreibt nie“ aufheben → nur nach Freigabe.
 
 ## Neuer Chat — so einsteigen
 1. `git status` und `git fetch` prüfen, bevor etwas geändert wird.

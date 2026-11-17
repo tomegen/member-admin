@@ -8,21 +8,24 @@ Ihre Daten bleiben auf Ihrem Computer. Die Mitgliederliste wird nur gelesen und 
 
 ## Installation
 
-Laden Sie unter [Releases](../../releases) die Datei für Ihr System herunter und entpacken Sie sie:
+**Download-Seite mit Schritt-für-Schritt-Anleitung: [tomegen.github.io/member-admin](https://tomegen.github.io/member-admin/)**
 
-| System | Datei | Starten |
+| System | Datei (unter [Releases](../../releases)) | Installieren |
 |---|---|---|
-| Windows | `Mitgliederverwaltung_<Version>_windows.zip` | Ordner entpacken, `Mitgliederverwaltung.exe` doppelklicken |
-| Mac (Apple Silicon, ab 2020) | `Mitgliederverwaltung_<Version>_mac.zip` | entpacken, `Mitgliederverwaltung.app` doppelklicken |
+| Windows 10/11 | `Mitgliederverwaltung-Windows-Setup.exe` | öffnen, „Installieren“ (keine Administratorrechte nötig); danach auf dem Desktop und im Startmenü |
+| Windows ohne Installation | `Mitgliederverwaltung-Windows.zip` | entpacken, `Mitgliederverwaltung.exe` doppelklicken |
+| Mac (Apple-Chip, ab Ende 2020) | `Mitgliederverwaltung-Mac.dmg` | öffnen, `Mitgliederverwaltung` auf „Programme“ ziehen |
+
+Eine neue Version installieren Sie genauso; die Einstellungen bleiben erhalten.
 
 **Warum erscheint beim ersten Start eine Warnung?** Das Programm ist (noch) nicht bei Microsoft bzw. Apple
 registriert; das kostet jährlich Geld. Das Programm ist trotzdem unbedenklich, der Quellcode ist öffentlich.
 - **Windows:** „Weitere Informationen“ → „Trotzdem ausführen“.
 - **Mac:** Wenn macOS das Öffnen verweigert: *Systemeinstellungen → Datenschutz & Sicherheit*, nach unten scrollen
-  und bei der Meldung zu „Mitgliederverwaltung“ auf **„Trotzdem öffnen“** klicken. Ab dann startet die App normal.
+  und bei der Meldung zu „Mitgliederverwaltung“ auf **„Dennoch öffnen“** klicken. Ab dann startet die App normal.
   (Bei älteren macOS-Versionen geht auch: Rechtsklick auf die App → „Öffnen“.)
 
-Die Datei `config.ini` neben dem Programm ist **optional** (nur für Fortgeschrittene, siehe unten).
+Die Datei `config.ini` neben dem Programm (Windows) ist **optional** (nur für Fortgeschrittene, siehe unten).
 
 ## So geht es
 
@@ -93,11 +96,14 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -r requirements-dev.txt   # Windows: .venv\Scripts\python.exe
 .venv/bin/python mitgliederverwaltung.py [mitgliederliste.xlsx]
 .venv/bin/python tests/test_regressions.py && .venv/bin/python tests/test_ui.py
-.venv/bin/python build.py 0.1.0        # erzeugt release/Mitgliederverwaltung_0.1.0_<system>.zip
+.venv/bin/python build.py 0.1.0        # Mac: release/Mitgliederverwaltung-Mac.dmg; Windows: -Windows-Setup.exe (mit Inno Setup 6) und -Windows.zip
 ```
 
 - **Release:** GitHub → Actions → „Build and Release“ → *Run workflow* mit Versionsnummer (z. B. `0.1.0`). Der Workflow
-  testet, baut Windows- und Mac-Version, prüft die gepackten Apps (`--smoke-test`) und legt das Release an.
-  Bei jedem Push auf `main` laufen nur Tests und Build.
+  testet, baut Windows-Installer und Mac-DMG, installiert und prüft sie (`--smoke-test`) und legt das Release an.
+  Bei jedem Push auf `main` laufen nur Tests und Build. Screenshots aller Tabs (Windows und Mac, mit der Beispieldatei)
+  liegen beim jeweiligen Lauf unter *Artifacts* (`--screenshots=<ordner>`).
+- **Download-Seite:** `docs/index.html` über GitHub Pages (Settings → Pages → *Deploy from a branch* → `main` / `/docs`).
+  Sie verlinkt `releases/latest/download/<Dateiname>`; die Dateinamen enthalten deshalb keine Versionsnummer.
 - Details für die Weiterentwicklung (auch mit Claude Code): `CLAUDE.md`.
 - Echte Mitgliederlisten gehören nie ins Repository (`data/` und `*.xlsx` sind ignoriert).

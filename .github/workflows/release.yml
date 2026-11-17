@@ -1,7 +1,8 @@
 name: Build and Release
 
 # push to main: run the tests and build both apps (no release)
-# manual run with a version: additionally publish the release with the Windows and macOS zip
+# manual run with a version: additionally publish the release (Windows installer + zip, macOS dmg);
+# the download page (docs/index.html) links to releases/latest/download/<file name>
 on:
   push:
     branches: [main]
@@ -50,26 +51,60 @@ jobs:
         python tests/test_regressions.py
         python tests/test_ui.py
 
-    - name: Build app and zip
+    - name: Install Inno Setup (Windows installer)
+      if: matrix.name == 'windows'
+      run: choco install innosetup --no-progress -y
+
+    - name: Build app and packages
       run: python build.py "${{ inputs.version || 'dev' }}"
 
-    # starts the packaged app, loads the example list and writes every export once (exit code 0 = ok)
-    - name: Smoke test packaged app (Windows)
+    # installs like a user would (no admin rights), then starts the installed app: it loads the example list
+    # and writes every export once (exit code 0 = ok)
+    - name: Install and smoke test (Windows)
       if: matrix.name == 'windows'
       shell: pwsh
       run: |
-        $process = Start-Process -FilePath "release\Mitgliederverwaltung\Mitgliederverwaltung.exe" -ArgumentList "--smoke-test", "example_file.xlsx" -Wait -PassThru
+        $setup = Start-Process -FilePath "release\Mitgliederverwaltung-Windows-Setup.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+        if ($setup.ExitCode -ne 0) { throw "Installer failed with exit code $($setup.ExitCode)" }
+        $exe = Join-Path $env:LOCALAPPDATA "Programs\Mitgliederverwaltung\Mitgliederverwaltung.exe"
+        if (-not (Test-Path $exe)) { throw "App not found after installation: $exe" }
+        $process = Start-Process -FilePath $exe -ArgumentList "--smoke-test", "$PWD\example_file.xlsx" -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "Smoke test failed with exit code $($process.ExitCode)" }
 
-    - name: Smoke test packaged app (macOS)
+    - name: Smoke test disk image (macOS)
       if: matrix.name == 'mac'
-      run: release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung --smoke-test example_file.xlsx
+      run: |
+        hdiutil attach release/Mitgliederverwaltung-Mac.dmg -nobrowse -readonly -mountpoint "$RUNNER_TEMP/dmg"
+        "$RUNNER_TEMP/dmg/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung" --smoke-test example_file.xlsx
+        hdiutil detach "$RUNNER_TEMP/dmg"
 
-    - name: Upload zip
+    # pictures of every tab with the example list, to see the app on each system (download: run → Artifacts)
+    - name: Screenshots
+      continue-on-error: true
+      timeout-minutes: 5
+      shell: bash
+      env:
+        QT_QPA_PLATFORM: ${{ matrix.name == 'windows' && 'windows' || 'offscreen' }}   # real Windows fonts
+      run: |
+        if [ "${{ matrix.name }}" = windows ]; then app=release/Mitgliederverwaltung/Mitgliederverwaltung.exe
+        else app=release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung; fi
+        "$app" --screenshots=screenshots example_file.xlsx
+
+    - name: Upload screenshots
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: Screenshots-${{ matrix.name }}
+        path: screenshots/
+
+    - name: Upload packages
       uses: actions/upload-artifact@v4
       with:
         name: Mitgliederverwaltung-${{ matrix.name }}
-        path: release/*.zip
+        path: |
+          release/Mitgliederverwaltung-Windows-Setup.exe
+          release/Mitgliederverwaltung-Windows.zip
+          release/Mitgliederverwaltung-Mac.dmg
         if-no-files-found: error
 
   release:
@@ -82,7 +117,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         pattern: Mitgliederverwaltung-*
-        path: zips
+        path: packages
         merge-multiple: true
 
     - name: Create release
@@ -90,4 +125,4 @@ jobs:
       with:
         tag_name: ${{ inputs.version }}
         name: Release ${{ inputs.version }}
-        files: zips/*.zip
+        files: packages/*

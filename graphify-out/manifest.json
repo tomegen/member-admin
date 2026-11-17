@@ -1,8 +1,8 @@
 {
   "build.py": {
-    "mtime": 1794653494.3868525,
-    "seen": 1794653863.637484,
-    "ast_hash": "2e46012813cfa61a7745add91894042e",
+    "mtime": 1794943627.8150203,
+    "seen": 1794944175.664196,
+    "ast_hash": "7fdfbdc6934f9edf1e386d45a21be21c",
     "semantic_hash": ""
   },
   "config/config.py": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "mitgliederverwaltung.py": {
-    "mtime": 1794658421.6537435,
-    "seen": 1794658480.452477,
-    "ast_hash": "4c9ec4a5cc04f1960c1fb5650df46e79",
+    "mtime": 1794944032.8275447,
+    "seen": 1794944175.664205,
+    "ast_hash": "8568377d122c3c94b262c8cbd8024c94",
     "semantic_hash": ""
   },
   "model/member.py": {
@@ -48,21 +48,21 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794658470.922839,
-    "seen": 1794658480.45249,
-    "ast_hash": "b1359784acf13ae7b409b449eb50a4f2",
+    "mtime": 1794944170.3443694,
+    "seen": 1794944175.6642182,
+    "ast_hash": "4d167ca438d52c8298f1e32239bb5b45",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1794658458.9698968,
-    "seen": 1794658480.452491,
-    "ast_hash": "01cdb4ae1486e31f710b04e7f1ad0d4a",
+    "mtime": 1794944170.343931,
+    "seen": 1794944175.664219,
+    "ast_hash": "96b97d0da993337ea0de6de5ae5631df",
     "semantic_hash": ""
   },
   "Release_Notes.md": {
-    "mtime": 1794658470.9226246,
-    "seen": 1794658480.452492,
-    "ast_hash": "e1a627053840c8161456f1e85b60bbde",
+    "mtime": 1794944170.344258,
+    "seen": 1794944175.6642199,
+    "ast_hash": "48707971b2974a76a0b2fcca4d307063",
     "semantic_hash": ""
   },
   "logic/date_utils.py": {
@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1794653780.4332306,
-    "seen": 1794653863.637481,
-    "ast_hash": "908269c33c0fd1596bf3016488838f82",
+    "mtime": 1794944012.6784947,
+    "seen": 1794944175.664195,
+    "ast_hash": "384b8ada5a797c1dfdcf73d726867f37",
     "semantic_hash": ""
   },
   "logic/export.py": {
@@ -96,9 +96,9 @@
     "semantic_hash": ""
   },
   "tests/test_ui.py": {
-    "mtime": 1794658355.0044768,
-    "seen": 1794658480.4524832,
-    "ast_hash": "2b07abae5b0f2572eb01f4bf093d65c8",
+    "mtime": 1794944032.8276496,
+    "seen": 1794944175.6642098,
+    "ast_hash": "af6246ab38e781fd3e0f1b5518c3ca92",
     "semantic_hash": ""
   },
   "ui/issues_page.py": {
@@ -150,9 +150,9 @@
     "semantic_hash": ""
   },
   "IDEAS.md": {
-    "mtime": 1794658470.922746,
-    "seen": 1794658480.452491,
-    "ast_hash": "9390ce26b29e34392d3f2f7f9a2bd549",
+    "mtime": 1794944170.34465,
+    "seen": 1794944175.664219,
+    "ast_hash": "f93203118b43d7f79867d8b5b5a94b58",
     "semantic_hash": ""
   },
   "logic/calendar_export.py": {
@@ -213,6 +213,24 @@
     "mtime": 1794658258.1270595,
     "seen": 1794658480.452487,
     "ast_hash": "d0be3ede51a4a1337aa01937e88b9319",
+    "semantic_hash": ""
+  },
+  "docs/index.html": {
+    "mtime": 1794944123.4318776,
+    "seen": 1794944175.6642208,
+    "ast_hash": "d337fdfa9d7593c4b542fdfc80b78f78",
+    "semantic_hash": ""
+  },
+  "docs/qr-download.svg": {
+    "mtime": 1794944059.8815167,
+    "seen": 1794944175.664223,
+    "ast_hash": "9c7b18b44f6c2ef2460bde16bc985ced",
+    "semantic_hash": ""
+  },
+  "docs/start.png": {
+    "mtime": 1794944123.4198077,
+    "seen": 1794944175.664224,
+    "ast_hash": "683b1452201ca953dda40a755239cef3",
     "semantic_hash": ""
   }
 }

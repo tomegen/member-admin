@@ -1,8 +1,10 @@
 import os
+import re
 import sys
 import tempfile
+import unicodedata
 
-from PySide6.QtCore import QCoreApplication, QTimer
+from PySide6.QtCore import QCoreApplication, QSettings, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.config import Config, ConfigError
@@ -33,10 +35,40 @@ def smoke_test(window, path):
     return True
 
 
+# used by the build: one picture of the start page and of every tab, to see the app on each system
+def take_screenshots(window, path, folder):
+    window.show_error = lambda title, text: print(title + ": " + text, file=sys.stderr)
+    os.makedirs(folder, exist_ok=True)
+    window.resize(1200, 800)
+    QApplication.processEvents()
+    pictures = [window.grab()]
+    if not window.load_file(path):
+        return False
+    for index in range(window.tabs.count()):
+        window.tabs.setCurrentIndex(index)
+        QApplication.processEvents()
+        pictures.append(window.grab())
+    names = ["Start"] + [window.tabs.tabText(index) for index in range(window.tabs.count())]
+    for number, (name, picture) in enumerate(zip(names, pictures)):
+        ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()  # Übersicht -> Ubersicht
+        if not picture.save(os.path.join(folder, "%d_%s.png" % (number, re.sub(r"\W+", "_", ascii_name).strip("_")))):
+            return False
+    return True
+
+
 def main():
+    # an excel file can be given as argument; --smoke-test checks the app and closes it again,
+    # --screenshots=<folder> saves pictures of the app with this file and closes it again
+    paths = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
+    screenshots = [argument.split("=", 1)[1] for argument in sys.argv[1:] if argument.startswith("--screenshots=")]
+    check = screenshots or "--smoke-test" in sys.argv
+
     app = QApplication(sys.argv)
     QCoreApplication.setOrganizationName("Mitgliederverwaltung")
-    QCoreApplication.setApplicationName("Mitglieder Management Portal")
+    # the checks get own empty settings: they must not show or replace the last file of the real app
+    QCoreApplication.setApplicationName("Mitglieder Management Portal" + (" Check" if check else ""))
+    if check:
+        QSettings().clear()
     apply_theme(app)
 
     try:
@@ -48,8 +80,8 @@ def main():
     window = MainWindow(config)
     window.show()
 
-    # an excel file can be given as argument; --smoke-test checks the app and closes it again
-    paths = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
+    if screenshots:
+        return 0 if paths and take_screenshots(window, paths[0], screenshots[0]) else 2
     if "--smoke-test" in sys.argv:
         try:
             return 0 if paths and smoke_test(window, paths[0]) else 2

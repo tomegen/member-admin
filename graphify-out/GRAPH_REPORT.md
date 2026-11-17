@@ -1,17 +1,17 @@
-# Graph Report - member-admin  (2026-11-14)
+# Graph Report - member-admin  (2026-11-17)
 
 ## Corpus Check
-- 34 files · ~12,596 words
+- 34 files · ~15,414 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .ini 1, .ico 1)
+- Unclassified: 5 file(s) not represented in the graph (top: (none) 2, .ini 1, .iss 1)
 
 ## Summary
-- 363 nodes · 885 edges · 15 communities (11 shown, 4 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 87 edges (avg confidence: 0.9)
+- 374 nodes · 907 edges · 20 communities (15 shown, 5 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 85 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f67346f1`
+- Built from commit: `1921be03`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,67 +22,72 @@
 - main_window.py
 - build.py
 - MainWindow
-- Ideen für das Mitglieder Management Portal
+- detect_columns
 - Release_Notes.md
 - Mitglieder Management Portal
 - .claude/CLAUDE.md
 - Members
 - ResultPage
 - Config
-- StatisticsPage
+- release
+- steps
+- version
+- IssuesPage
+- build
+- strategy
 
 ## God Nodes (most connected - your core abstractions)
-1. `MainWindow` - 33 edges
+1. `MainWindow` - 32 edges
 2. `Members` - 31 edges
-3. `Config` - 24 edges
+3. `Config` - 23 edges
 4. `MemberListTest` - 22 edges
 5. `make_member()` - 20 edges
-6. `UiTest` - 20 edges
+6. `UiTest` - 19 edges
 7. `ResultPage` - 19 edges
-8. `find_birthdays()` - 14 edges
-9. `Aufbau` - 14 edges
+8. `Aufbau` - 14 edges
+9. `find_birthdays()` - 14 edges
 10. `shift_years()` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Aufbau` --references--> `Config`  [INFERRED]
+  CLAUDE.md → config/config.py
 - `Aufbau` --references--> `ConfigError`  [INFERRED]
   CLAUDE.md → config/config.py
 - `Aufbau` --references--> `parse_numbers()`  [INFERRED]
   CLAUDE.md → config/config.py
-- `Aufbau` --references--> `Config`  [INFERRED]
-  CLAUDE.md → config/config.py
-- `Aufbau` --references--> `age_on()`  [INFERRED]
-  CLAUDE.md → model/checks.py
-- `Aufbau` --references--> `Entry`  [INFERRED]
-  CLAUDE.md → model/entry.py
+- `Aufbau` --references--> `shift_years()`  [INFERRED]
+  CLAUDE.md → logic/date_utils.py
+- `Aufbau` --references--> `detect_columns()`  [INFERRED]
+  CLAUDE.md → model/columns.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (15 total, 4 thin omitted)
+## Communities (20 total, 5 thin omitted)
 
 ### Community 0 - "with"
-Cohesion: 0.05
-Nodes (47): env, runs-on, steps, strategy, timeout-minutes, QT_QPA_PLATFORM, name, os (+39 more)
+Cohesion: 0.18
+Nodes (11): with, cache, cache-dependency-path, files, if-no-files-found, merge-multiple, name, path (+3 more)
 
 ### Community 1 - "pandas"
-Cohesion: 0.09
-Nodes (18): Aufbau, CLAUDE.md — member-admin ("Mitglieder Management Portal"), Entwickeln (macOS/Windows), Festlegungen (nicht rückgängig machen), graphify, Neuer Chat — so einsteigen, Regeln für Änderungen, Verteilung / offene Punkte (Stand 2026-11-14) (+10 more)
+Cohesion: 0.12
+Nodes (17): Aufbau, CLAUDE.md — member-admin ("Mitglieder Management Portal"), Entwickeln (macOS/Windows), Festlegungen (nicht rückgängig machen), graphify, Neuer Chat — so einsteigen, Regeln für Änderungen, Verteilung / offene Punkte (Stand 2026-11-17) (+9 more)
 
 ### Community 2 - "birthday_calculation.py"
 Cohesion: 0.09
-Nodes (25): find_birthdays(), is_birthday(), write_birthdays_into_ics(), write_birthdays_into_txt(), reminder(), write_entries_into_ics(), shift_years(), entries_to_rows() (+17 more)
+Nodes (24): find_birthdays(), is_birthday(), write_birthdays_into_ics(), write_birthdays_into_txt(), reminder(), write_entries_into_ics(), shift_years(), entries_to_rows() (+16 more)
 
 ### Community 3 - "main_window.py"
-Cohesion: 0.13
-Nodes (14): IssuesPage, NumberItem, default_year(), make_card(), OverviewPage, ResultSpec, save_file(), as_text() (+6 more)
+Cohesion: 0.14
+Nodes (14): parse_numbers(), default_year(), make_card(), OverviewPage, ResultSpec, save_file(), as_text(), SettingsDialog (+6 more)
 
-### Community 5 - "MainWindow"
+### Community 4 - "build.py"
+Cohesion: 0.38
+Nodes (4): find_inno_setup(), package(), package_mac(), package_windows()
+
+### Community 6 - "detect_columns"
 Cohesion: 0.11
-Nodes (3): UiTest, MainWindow, WelcomePage
-
-### Community 6 - "Ideen für das Mitglieder Management Portal"
-Cohesion: 0.25
-Nodes (7): Ausgabe, Auswertungen, Bedienung und Betrieb, Daten und Excel (Fehler an der Quelle vermeiden), Ideen für das Mitglieder Management Portal, Meine Reihenfolge, Verteilung und Technik (zurückgestellt oder offen)
+Nodes (13): Ausgabe, Auswertungen, Bedienung und Betrieb, Daten und Excel (Fehler an der Quelle vermeiden), Ideen für das Mitglieder Management Portal, Kostenloser Download (2026-11-17 umgesetzt, auf GitHub noch ungetestet), Meine Reihenfolge, Mitglieder in der App pflegen (nur notiert, nicht umsetzen) (+5 more)
 
 ### Community 7 - "Release_Notes.md"
 Cohesion: 0.33
@@ -93,34 +98,50 @@ Cohesion: 0.25
 Nodes (7): Die Excel-Liste, Einstellungen, Für Entwickler, Installation, Mitglieder Management Portal, Regeln der Berechnung, So geht es
 
 ### Community 10 - "Members"
-Cohesion: 0.16
-Nodes (3): Members, DataCheckTest, MemberListTest
+Cohesion: 0.10
+Nodes (6): Config, Members, DataCheckTest, MemberListTest, SettingsTest, TemplateTest
 
 ### Community 12 - "Config"
-Cohesion: 0.10
-Nodes (10): Config, ConfigError, parse_numbers(), write_statistics_into_xlsx(), write_member_template(), main(), smoke_test(), SettingsTest (+2 more)
+Cohesion: 0.09
+Nodes (12): ConfigError, age_group_label(), Statistics, write_statistics_into_xlsx(), write_member_template(), main(), smoke_test(), take_screenshots() (+4 more)
 
-### Community 14 - "StatisticsPage"
-Cohesion: 0.19
-Nodes (5): age_group_label(), Statistics, StatisticsTest, german_number(), StatisticsPage
+### Community 14 - "release"
+Cohesion: 0.22
+Nodes (9): jobs, release, name, permissions, contents, if, needs, permissions (+1 more)
+
+### Community 15 - "steps"
+Cohesion: 0.25
+Nodes (9): steps, steps, continue-on-error, if, name, run, shell, timeout-minutes (+1 more)
+
+### Community 16 - "version"
+Cohesion: 0.22
+Nodes (9): version, on, push, workflow_dispatch, branches, description, required, type (+1 more)
+
+### Community 18 - "build"
+Cohesion: 0.33
+Nodes (6): env, runs-on, timeout-minutes, QT_QPA_PLATFORM, build, env
+
+### Community 19 - "strategy"
+Cohesion: 0.33
+Nodes (6): strategy, name, os, include, fail-fast, matrix
 
 ## Knowledge Gaps
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Members` connect `Members` to `pandas`, `birthday_calculation.py`, `main_window.py`, `MainWindow`, `Config`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
-- **Are the 10 inferred relationships involving `MainWindow` (e.g. with `UiTest` and `MemberListError`) actually correct?**
-  _`MainWindow` has 10 INFERRED edges - model-reasoned connections that need verification._
-- **Should `with` be split into smaller, more focused modules?**
-  _Cohesion score 0.04521276595744681 - nodes in this community are weakly interconnected._
-- **Why does `MainWindow` connect `MainWindow` to `pandas`, `birthday_calculation.py`, `main_window.py`, `Members`, `ResultPage`, `Config`, `StatisticsPage`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Why does `Members` connect `Members` to `pandas`, `birthday_calculation.py`, `main_window.py`, `MainWindow`?**
+  _High betweenness centrality (0.099) - this node is a cross-community bridge._
+- **Are the 9 inferred relationships involving `MainWindow` (e.g. with `MemberListError` and `Members`) actually correct?**
+  _`MainWindow` has 9 INFERRED edges - model-reasoned connections that need verification._
+- **Should `pandas` be split into smaller, more focused modules?**
+  _Cohesion score 0.11576354679802955 - nodes in this community are weakly interconnected._
+- **Why does `MainWindow` connect `MainWindow` to `pandas`, `birthday_calculation.py`, `main_window.py`, `Members`, `ResultPage`, `Config`, `IssuesPage`?**
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `Members` (e.g. with `Issue` and `DataCheckTest`) actually correct?**
   _`Members` has 5 INFERRED edges - model-reasoned connections that need verification._
-- **Should `pandas` be split into smaller, more focused modules?**
-  _Cohesion score 0.08534850640113797 - nodes in this community are weakly interconnected._
-- **Why does `Config` connect `Config` to `pandas`, `birthday_calculation.py`, `Members`, `MainWindow`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Should `birthday_calculation.py` be split into smaller, more focused modules?**
+  _Cohesion score 0.09077380952380952 - nodes in this community are weakly interconnected._
+- **Why does `detect_columns()` connect `detect_columns` to `pandas`, `birthday_calculation.py`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._

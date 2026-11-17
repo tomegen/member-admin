@@ -192,6 +192,14 @@ class UiTest(unittest.TestCase):
         self.assertTrue(self.window.load_file(path))
         self.assertEqual(self.window.members.members, [])
 
+    def test_screenshots_show_start_page_and_every_tab(self):
+        from mitgliederverwaltung import take_screenshots
+        folder = os.path.join(self.tmp.name, "shots")
+        self.assertTrue(take_screenshots(self.window, self.sample(), folder))
+        names = sorted(os.listdir(folder))
+        self.assertEqual(len(names), 1 + self.window.tabs.count())
+        self.assertEqual(names[:2], ["0_Start.png", "1_Ubersicht.png"])
+
 
 if __name__ == "__main__":
     unittest.main()

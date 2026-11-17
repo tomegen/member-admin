@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mitglieder Management Portal – Download</title>
+<meta name="description" content="Kostenloses Programm für Vereinsvorstände: runde Geburtstage, Ehrungen und Statistik aus der Mitglieder-Excel. Für Windows und Mac.">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb;
+    --accent: #2563eb; --accent-hover: #1d4ed8; --note: #fff7ed; --note-border: #fdba74;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827; --card: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --border: #374151;
+      --accent: #3b82f6; --accent-hover: #60a5fa; --note: #2a2116; --note-border: #9a6b2f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); line-height: 1.55;
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 2rem; margin: 0 0 8px; line-height: 1.2; }
+  h2 { font-size: 1.35rem; margin: 40px 0 12px; }
+  h3 { font-size: 1.1rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--muted); font-size: 1.1rem; }
+  .shot { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 10px; margin: 20px 0 8px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card.recommended { border: 2px solid var(--accent); }
+  .badge { display: none; font-size: 0.8rem; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+  .card.recommended .badge { display: block; }
+  .button {
+    display: block; text-align: center; background: var(--accent); color: #fff; text-decoration: none;
+    font-weight: 600; padding: 14px 16px; border-radius: 8px; margin: 12px 0 8px;
+  }
+  .button:hover { background: var(--accent-hover); }
+  .small { font-size: 0.9rem; color: var(--muted); }
+  a { color: var(--accent); }
+  ol { padding-left: 1.4em; margin: 0 0 12px; }
+  li { margin-bottom: 8px; }
+  .note { background: var(--note); border: 1px solid var(--note-border); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+  .ui { font-weight: 600; }
+  details { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 4px 20px; margin-bottom: 12px; }
+  details[open] { padding-bottom: 12px; }
+  summary { cursor: pointer; font-weight: 600; padding: 12px 0; font-size: 1.1rem; }
+  .qr { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .qr img { background: #fff; padding: 8px; border-radius: 8px; width: 160px; height: 160px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 0.9rem; }
+  #mobile { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mitglieder Management Portal</h1>
+  <p class="lead">Kostenloses Programm für Vereinsvorstände: Es liest Ihre Mitgliederliste (Excel) und erstellt daraus
+    die runden Geburtstage, die Ehrungen für langjährige Mitgliedschaft und eine Mitgliederstatistik.
+    Ihre Daten bleiben auf Ihrem Computer.</p>
+
+  <img class="shot" src="start.png" width="760" height="440" alt="Startbildschirm des Programms mit dem Knopf „Mitgliederliste auswählen“">
+
+  <p id="mobile" class="note">Das Programm läuft auf einem Windows-PC oder einem Mac. Bitte öffnen Sie diese Seite
+    am Computer (Adresse: <strong>tomegen.github.io/member-admin</strong>).</p>
+
+  <h2>1. Herunterladen</h2>
+  <div class="cards">
+    <div class="card" id="card-windows">
+      <div class="badge">Passend für Ihren Computer</div>
+      <h3>Windows</h3>
+      <p class="small">Windows 10 oder 11</p>
+      <a class="button" href="https://github.com/tomegen/member-admin/releases/latest/download/Mitgliederverwaltung-Windows-Setup.exe">Für Windows herunterladen</a>
+      <p class="small">Ohne Installation (z.&nbsp;B. für einen USB-Stick):
+        <a href="https://github.com/tomegen/member-admin/releases/latest/download/Mitgliederverwaltung-Windows.zip">ZIP-Datei</a></p>
+    </div>
+    <div class="card" id="card-mac">
+      <div class="badge">Passend für Ihren Computer</div>
+      <h3>Mac</h3>
+      <p class="small">Mac mit Apple-Chip (M1 oder neuer, ab Ende 2020)</p>
+      <a class="button" href="https://github.com/tomegen/member-admin/releases/latest/download/Mitgliederverwaltung-Mac.dmg">Für Mac herunterladen</a>
+      <p class="small">Prüfen: Apple-Menü (oben links) → <span class="ui">Über diesen Mac</span> → bei „Chip“ steht „Apple M…“.</p>
+    </div>
+  </div>
+
+  <h2>2. Installieren</h2>
+  <div class="note">
+    <strong>Warum warnt der Computer?</strong> Das Programm ist nicht bei Microsoft bzw. Apple registriert,
+    denn das kostet jedes Jahr Geld. Es ist trotzdem unbedenklich: Der Quellcode ist öffentlich einsehbar.
+    Die Warnung kommt nur beim ersten Mal.
+  </div>
+
+  <details id="steps-windows">
+    <summary>Installation unter Windows</summary>
+    <ol>
+      <li>Klicken Sie auf <span class="ui">Für Windows herunterladen</span> und öffnen Sie die heruntergeladene Datei
+        <em>Mitgliederverwaltung-Windows-Setup.exe</em>.</li>
+      <li>Falls der Browser meldet, die Datei werde „nicht häufig heruntergeladen“: auf die drei Punkte <span class="ui">…</span>
+        neben der Meldung klicken → <span class="ui">Beibehalten</span> → <span class="ui">Mehr anzeigen</span> →
+        <span class="ui">Trotzdem beibehalten</span>.</li>
+      <li>Erscheint „Der Computer wurde durch Windows geschützt“: auf <span class="ui">Weitere Informationen</span> klicken,
+        dann auf <span class="ui">Trotzdem ausführen</span>.</li>
+      <li>Im Installationsprogramm auf <span class="ui">Installieren</span> und dann <span class="ui">Fertigstellen</span> klicken.
+        Administratorrechte sind nicht nötig.</li>
+      <li>Das Programm finden Sie ab jetzt auf dem Desktop und im Startmenü unter <strong>Mitgliederverwaltung</strong>.</li>
+    </ol>
+    <p class="small">Entfernen: Einstellungen → Apps → Mitgliederverwaltung → Deinstallieren.</p>
+  </details>
+
+  <details id="steps-mac">
+    <summary>Installation auf dem Mac</summary>
+    <ol>
+      <li>Klicken Sie auf <span class="ui">Für Mac herunterladen</span> und öffnen Sie die Datei
+        <em>Mitgliederverwaltung-Mac.dmg</em> (im Ordner „Downloads“).</li>
+      <li>Ziehen Sie im neuen Fenster <strong>Mitgliederverwaltung</strong> auf den Ordner <strong>Programme</strong>.</li>
+      <li>Öffnen Sie das Programm aus dem Ordner „Programme“ (Finder → Programme → Mitgliederverwaltung).</li>
+      <li>Meldet der Mac „Mitgliederverwaltung“ wurde nicht geöffnet: auf <span class="ui">Fertig</span> klicken.
+        Dann Apple-Menü (oben links) → <span class="ui">Systemeinstellungen</span> → <span class="ui">Datenschutz &amp; Sicherheit</span>,
+        ganz nach unten scrollen und bei „Mitgliederverwaltung“ auf <span class="ui">Dennoch öffnen</span> klicken,
+        mit Ihrem Passwort bestätigen. Das ist nur einmal nötig.</li>
+      <li>Danach im Finder links beim Laufwerk „Mitgliederverwaltung“ auf den Auswerfen-Pfeil klicken.</li>
+    </ol>
+    <p class="small">Entfernen: Programm aus dem Ordner „Programme“ in den Papierkorb ziehen.</p>
+  </details>
+
+  <h2>3. Loslegen</h2>
+  <ol>
+    <li>Programm starten und Ihre <strong>Excel-Mitgliederliste auswählen</strong> (oder in das Fenster ziehen).
+      Noch keine Liste? Auf der Startseite gibt es eine leere Excel-Vorlage.</li>
+    <li>Oben das <strong>Auswertungsjahr</strong> prüfen.</li>
+    <li>In den Bereichen <strong>Geburtstage</strong> und <strong>Ehrungen</strong> sehen Sie die Treffer und können sie
+      als Text-, Excel- oder Kalenderdatei speichern.</li>
+  </ol>
+  <p>Die Mitgliederliste wird nur gelesen, nie verändert.
+    Ausführliche Anleitung: <a href="https://github.com/tomegen/member-admin#readme">Beschreibung des Programms</a>.</p>
+
+  <h2>Neue Version</h2>
+  <p>Laden Sie das Programm einfach erneut über diese Seite herunter und installieren Sie es wie oben.
+    Ihre Einstellungen bleiben erhalten. Was sich geändert hat, steht in den
+    <a href="https://github.com/tomegen/member-admin/releases">Versionshinweisen</a>.</p>
+
+  <h2>Seite weitergeben</h2>
+  <div class="qr">
+    <img src="qr-download.svg" alt="QR-Code zu dieser Seite">
+    <p>Mit dem QR-Code oder der Adresse<br><strong>tomegen.github.io/member-admin</strong><br>
+      finden andere Vorstände diese Seite.</p>
+  </div>
+
+  <footer>
+    Ein ehrenamtliches Projekt für Vereine, kostenlos und ohne Werbung.
+    <a href="https://github.com/tomegen/member-admin">Quellcode</a>
+  </footer>
+</main>
+<script>
+  // recommend the download for this computer and open its installation steps
+  (function () {
+    var agent = navigator.userAgent || "";
+    var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+    var mobile = /Android|iPhone|iPad|iPod/i.test(agent) || (/Mac/.test(platform) && navigator.maxTouchPoints > 1);
+    if (mobile) {
+      document.getElementById("mobile").style.display = "block";
+      return;
+    }
+    var system = /Win/i.test(platform + agent) ? "windows" : /Mac/i.test(platform + agent) ? "mac" : null;
+    if (!system) return;
+    document.getElementById("card-" + system).classList.add("recommended");
+    document.getElementById("steps-" + system).open = true;
+  })();
+</script>
+</body>
+</html>

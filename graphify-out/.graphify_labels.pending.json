@@ -5,7 +5,7 @@
   "3": "main_window.py",
   "4": "build.py",
   "5": "MainWindow",
-  "6": "Ideen für das Mitglieder Management Portal",
+  "6": "detect_columns",
   "7": "Release_Notes.md",
   "8": "Mitglieder Management Portal",
   "9": ".claude/CLAUDE.md",
@@ -13,5 +13,10 @@
   "11": "ResultPage",
   "12": "Config",
   "13": "Exception",
-  "14": "StatisticsPage"
+  "14": "release",
+  "15": "steps",
+  "16": "version",
+  "17": "IssuesPage",
+  "18": "build",
+  "19": "strategy"
 }
