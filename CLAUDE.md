@@ -87,12 +87,10 @@ Ehrung n analog mit „Mitglied seit“.
   **Entscheidung Thomas (2026-11-14): vorerst nicht signieren.** Nicht erneut vorschlagen, außer er fragt danach.
 - Ideenliste mit Priorisierung: `IDEAS.md`.
 - macOS-Build nur Apple Silicon (`macos-latest`). **Entscheidung Thomas (2026-11-17): Intel-Mac nicht nötig.**
-- Workflow `release.yml` lief auf GitHub grün (2026-11-17, Commit `1921be0`: Windows + macOS, Tests + Smoke-Test); der Release-Job (Workflow-Dispatch) ist noch nicht gelaufen.
-- Download (Installer, DMG, feste Dateinamen, Download-Seite `docs/`, CI-Screenshots) umgesetzt am 2026-11-17, **noch nicht committet, auf GitHub ungetestet**.
-  Lokal geprüft: Mac-DMG gebaut, App aus dem DMG mit Smoke-Test und Screenshots. Windows-Installer nur über CI prüfbar.
-  GitHub Pages muss einmalig aktiviert werden (Settings → Pages → `main` / `/docs`); die Links funktionieren erst ab dem ersten Release mit den neuen Dateinamen.
+- **Release 0.1.0 veröffentlicht (2026-11-17)** über den Workflow (alle Jobs grün, inkl. stiller Installation + Smoke-Test unter Windows und Smoke-Test aus dem DMG).
+  Download-Seite live: https://tomegen.github.io/member-admin/ (GitHub Pages aus `main` / `/docs`); `releases/latest/download/…`-Links geprüft (HTTP 200).
+  Noch nicht von Hand auf einem echten Windows-PC installiert; Windows-Screenshots aus CI sehen sauber aus (Tabellenköpfe etwas kleiner als auf dem Mac).
 - Windows lokal testen (Docker/VM): **laut Thomas nicht nötig** (Mac-Docker kann keine Windows-Container); Windows-Prüfung über CI.
-- Ideen 1, 2, 3, 4, 8, 9, 14, 16 aus `IDEAS.md` sind committet und gepusht, aber noch **nicht als Release veröffentlicht** (letztes Release 0.0.3 von 2024).
 - Mitglieder in der App bearbeiten, Standard-Schema, Dateien je Mitglied (`IDEAS.md` 31–36) und 37–49 sind **nur notiert**. 31–36 würden die Festlegung „App schreibt nie“ aufheben → nur nach Freigabe.
 
 ## Neuer Chat — so einsteigen

@@ -1,6 +1,6 @@
 # Ideen für das Mitglieder Management Portal
 
-Stand 2026-11-17. Sortiert nach Empfehlung. **Umgesetzt (committet, noch kein Release): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24. Umgesetzt, noch nicht committet: 26–30.** Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt).
+Stand 2026-11-17. Sortiert nach Empfehlung. **Umgesetzt und in Release 0.1.0 (2026-11-17): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24, 26–30.** Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt).
 Ideen 31–49 (2026-11-17) sind nur notiert, **nichts davon umsetzen ohne Freigabe von Thomas**. Aufwand: S = Stunden, M = ein bis wenige Tage, L = Wochenende+.
 „Beleg“ nennt, woran ich die Idee in der echten Mitgliederliste (nur Zähler) oder im Code festmache.
 
@@ -54,7 +54,7 @@ Ideen 31–49 (2026-11-17) sind nur notiert, **nichts davon umsetzen ohne Freiga
 | 24 | ✅ Windows-Build und Workflow tatsächlich auf GitHub laufen lassen | | S | Lauf für `1921be0` am 2026-11-17 grün (Windows + macOS, Tests + Smoke-Test) |
 | 25 | Screenshot-Tests in CI (Offscreen-Rendern vergleichen) | Oberflächenfehler früh erkennen | M | Rendern funktioniert bereits lokal; Einstieg über 30 |
 
-## Kostenloser Download (2026-11-17 umgesetzt, auf GitHub noch ungetestet)
+## Kostenloser Download (2026-11-17 umgesetzt, live: tomegen.github.io/member-admin)
 
 Ziel: ein Link (z. B. `tomegen.github.io/member-admin`) mit je einem Knopf für Windows und Mac. Nur GitHub Releases + Pages, keine Kosten, weiterhin unsigniert (siehe 21).
 
@@ -69,6 +69,8 @@ Ziel: ein Link (z. B. `tomegen.github.io/member-admin`) mit je einem Knopf für 
 Hinweis für die Installation vor Ort: Per USB-Stick kopiert erscheint meist keine Warnung (die Sperre greift nur bei Downloads).
 
 ## Mitglieder in der App pflegen (nur notiert, nicht umsetzen)
+
+**2026-11-19 ausgearbeitet in `PLAN_DATA_STORAGE.md`** (ersetzt 31–36 und 45; 39 entfällt). Der Plan gilt, die Liste unten ist nur noch Historie.
 
 Würde die Festlegung „App liest nur, schreibt nie“ aufheben → vorher Thomas fragen. Vorschlag: ein **Vereinsordner** statt einer losen Excel:
 `Mitglieder.xlsx` (Standardformat, weiter in Excel/am Handy bearbeitbar) · `Dateien/<Nr> <Name>/…` · `Sicherungen/…`.
@@ -104,7 +106,7 @@ Offene Fragen: Wo liegt die Excel (lokal, USB, OneDrive/Dropbox/Nextcloud)? Wie 
 ## Meine Reihenfolge
 
 1. ✅ 24 (Pipeline auf GitHub grün).
-2. ✅ 26–30 (Installer, DMG, feste Links, Download-Seite, Windows-Screenshots). **Als Nächstes:** committen, Lauf auf GitHub prüfen, Pages aktivieren, Release 0.1.0 (nur auf Anweisung).
+2. ✅ 26–30 (Installer, DMG, feste Links, Download-Seite, Windows-Screenshots). Release 0.1.0 veröffentlicht, Download-Seite live. **Als Nächstes:** Rückmeldungen der Vorstände zur Installation sammeln.
 3. ✅ 1, 2, 3, 8, 9, 14, 16.
 4. Danach, nach Rückfrage: 31–33 (Standard-Schema, Import, sicheres Schreiben) als Grundlage für 34–36 und 45–48.
 5. 13 (Urkunden): größter Nutzen bei Ehrungen, braucht eine Vorlage vom Verein; zurückgestellt.
