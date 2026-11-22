@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "mitgliederverwaltung.py": {
-    "mtime": 1795111891.3389547,
-    "seen": 1795112127.3140311,
-    "ast_hash": "feca44cbefca0d9c0e4037cd19799684",
+    "mtime": 1795353763.4944775,
+    "seen": 1795353903.4250062,
+    "ast_hash": "1ab8225a0c397f738e85a8d838d6b60c",
     "semantic_hash": ""
   },
   "model/member.py": {
@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795352692.9532812,
-    "seen": 1795352706.2189481,
-    "ast_hash": "217de4fc4384574d85333d3f60630c91",
+    "mtime": 1795353886.5797257,
+    "seen": 1795353903.425039,
+    "ast_hash": "798f29c75f8bca478c32073dadc90b9b",
     "semantic_hash": ""
   },
   "README.md": {
@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1795345190.499368,
-    "seen": 1795345198.766038,
-    "ast_hash": "2eb5ba882c4802a4ca6f5e4f81dcab56",
+    "mtime": 1795353886.5795066,
+    "seen": 1795353903.4249861,
+    "ast_hash": "ade7626d23d0d6e1dd64100a664c6228",
     "semantic_hash": ""
   },
   "logic/export.py": {
@@ -96,9 +96,9 @@
     "semantic_hash": ""
   },
   "tests/test_ui.py": {
-    "mtime": 1795352692.9529874,
-    "seen": 1795352706.2189372,
-    "ast_hash": "a44c21f71fb3518df84946241fcefac8",
+    "mtime": 1795353353.893044,
+    "seen": 1795353903.425025,
+    "ast_hash": "1796c49be3d9fd4b2e56ddae0f689466",
     "semantic_hash": ""
   },
   "ui/issues_page.py": {
@@ -108,9 +108,9 @@
     "semantic_hash": ""
   },
   "ui/main_window.py": {
-    "mtime": 1795352560.2057827,
-    "seen": 1795352706.21894,
-    "ast_hash": "14c76dad99ba2895bf56e69de7b292b3",
+    "mtime": 1795353183.7974,
+    "seen": 1795353903.42503,
+    "ast_hash": "33a4a201135c5f028e60fe0ffb937549",
     "semantic_hash": ""
   },
   "ui/overview_page.py": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "ui/welcome_page.py": {
-    "mtime": 1794658280.6995785,
-    "seen": 1794658480.452489,
-    "ast_hash": "a22db92285ae8dea5c01ad8122673bfa",
+    "mtime": 1795353183.7971232,
+    "seen": 1795353903.4250371,
+    "ast_hash": "8a280aa4315bb4e00df016eec55eea4b",
     "semantic_hash": ""
   },
   "requirements-dev.txt": {
@@ -252,9 +252,9 @@
     "semantic_hash": ""
   },
   "PLAN_DATA_STORAGE.md": {
-    "mtime": 1795352692.9536493,
-    "seen": 1795352706.218949,
-    "ast_hash": "46090fcc7c6fc32158613d68d57fe38a",
+    "mtime": 1795353886.579993,
+    "seen": 1795353903.4250398,
+    "ast_hash": "a1f99c8ffa5d79737603573b23831127",
     "semantic_hash": ""
   },
   "store/backups.py": {
@@ -339,6 +339,48 @@
     "mtime": 1795352667.464543,
     "seen": 1795352706.218942,
     "ast_hash": "a71bad8641171244afaf20006dba83cb",
+    "semantic_hash": ""
+  },
+  "importer/first_names.py": {
+    "mtime": 1795352918.846195,
+    "seen": 1795353903.424993,
+    "ast_hash": "6ef68ef696d0b779020d8447aa877c12",
+    "semantic_hash": ""
+  },
+  "importer/gender.py": {
+    "mtime": 1795352919.1765254,
+    "seen": 1795353903.424994,
+    "ast_hash": "cdd9557c622467ad34b7cc9e003dc0c4",
+    "semantic_hash": ""
+  },
+  "importer/mapping.py": {
+    "mtime": 1795353043.0480537,
+    "seen": 1795353903.4249952,
+    "ast_hash": "75021867b84be5848cd57123feab7abf",
+    "semantic_hash": ""
+  },
+  "importer/reader.py": {
+    "mtime": 1795353373.9756289,
+    "seen": 1795353903.4249961,
+    "ast_hash": "a75e0311df02e2fec272737dc1515a61",
+    "semantic_hash": ""
+  },
+  "importer/writer.py": {
+    "mtime": 1795352970.5512834,
+    "seen": 1795353903.424997,
+    "ast_hash": "4a27fe04bbde6f1dadd541d6a70f93ed",
+    "semantic_hash": ""
+  },
+  "tests/test_import.py": {
+    "mtime": 1795353772.68926,
+    "seen": 1795353903.425023,
+    "ast_hash": "e90dac99f4f88ce57538091261f913ff",
+    "semantic_hash": ""
+  },
+  "ui/import_wizard.py": {
+    "mtime": 1795353838.9669046,
+    "seen": 1795353903.425028,
+    "ast_hash": "375896f91fb4fae7df4f6be8b4616dd8",
     "semantic_hash": ""
   }
 }

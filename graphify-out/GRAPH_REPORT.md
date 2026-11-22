@@ -1,17 +1,17 @@
 # Graph Report - member-admin  (2026-11-22)
 
 ## Corpus Check
-- 52 files · ~32,806 words
+- 59 files · ~39,011 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 2, .ini 1, .iss 1)
 
 ## Summary
-- 732 nodes · 2097 edges · 25 communities (22 shown, 3 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 165 edges (avg confidence: 0.89)
+- 859 nodes · 2549 edges · 26 communities (23 shown, 3 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e03f608f`
+- Built from commit: `2472449d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,7 +20,7 @@
 - club_file.py
 - birthday_calculation.py
 - main_window.py
-- changes.py
+- reader.py
 - MainWindow
 - Member
 - Release_Notes.md
@@ -29,6 +29,7 @@
 - Members
 - MemberDialog
 - test_store.py
+- CheckPage
 - release
 - steps
 - version
@@ -38,60 +39,61 @@
 - os
 - template.py
 - MemberEditingUiTest
+- ResultPage
 - Ideen für das Mitglieder Management Portal
 
 ## God Nodes (most connected - your core abstractions)
-1. `Members` - 44 edges
-2. `save()` - 42 edges
-3. `MainWindow` - 40 edges
-4. `ClubSettings` - 26 edges
-5. `Aufbau` - 26 edges
-6. `muted()` - 25 edges
-7. `MemberDialog` - 24 edges
-8. `update_member()` - 23 edges
-9. `make_member()` - 23 edges
-10. `Config` - 23 edges
+1. `Members` - 46 edges
+2. `MainWindow` - 42 edges
+3. `save()` - 42 edges
+4. `to_text()` - 36 edges
+5. `muted()` - 29 edges
+6. `normalize()` - 28 edges
+7. `Aufbau` - 26 edges
+8. `Config` - 26 edges
+9. `ClubSettings` - 25 edges
+10. `MemberDialog` - 23 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `7. Tests` --references--> `is_standard()`  [INFERRED]
-  PLAN_DATA_STORAGE.md → model/club_file.py
 - `4. Import-Assistent (QWizard)` --references--> `detect_columns()`  [INFERRED]
   PLAN_DATA_STORAGE.md → model/columns.py
+- `7. Tests` --references--> `is_standard()`  [INFERRED]
+  PLAN_DATA_STORAGE.md → model/club_file.py
 - `Mitglieder in der App pflegen (nur notiert, nicht umsetzen)` --references--> `detect_columns()`  [INFERRED]
   IDEAS.md → model/columns.py
-- `6. Code` --references--> `is_standard()`  [INFERRED]
-  PLAN_DATA_STORAGE.md → model/club_file.py
-- `Aufbau` --references--> `is_standard_file()`  [INFERRED]
-  CLAUDE.md → model/club_file.py
+- `Was die App kann` --references--> `ClubSettingsDialog`  [INFERRED]
+  CLAUDE.md → ui/club_settings_dialog.py
+- `Aufbau` --references--> `Config`  [INFERRED]
+  CLAUDE.md → config/config.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (25 total, 3 thin omitted)
+## Communities (26 total, 3 thin omitted)
 
 ### Community 0 - "with"
 Cohesion: 0.18
 Nodes (11): with, cache, cache-dependency-path, files, if-no-files-found, merge-multiple, name, path (+3 more)
 
 ### Community 1 - "club_file.py"
-Cohesion: 0.08
-Nodes (36): Festlegungen (nicht rückgängig machen), cell_key(), choice(), heading_columns(), headings(), is_standard(), is_standard_file(), members_sheet() (+28 more)
+Cohesion: 0.06
+Nodes (64): estimate_genders(), gender_of_first_name(), assign_numbers(), convert(), distinct_values(), guess_header_row(), ImportRow, is_missing() (+56 more)
 
 ### Community 2 - "birthday_calculation.py"
-Cohesion: 0.06
-Nodes (37): find_birthdays(), is_birthday(), write_birthdays_into_ics(), write_birthdays_into_txt(), reminder(), with_gift(), write_entries_into_ics(), shift_years() (+29 more)
+Cohesion: 0.07
+Nodes (34): find_birthdays(), is_birthday(), write_birthdays_into_ics(), write_birthdays_into_txt(), reminder(), with_gift(), write_entries_into_ics(), shift_years() (+26 more)
 
 ### Community 3 - "main_window.py"
-Cohesion: 0.05
-Nodes (21): parse_numbers(), shown(), IssuesPage, NumberItem, date_item(), MembersPage, SortItem, make_card() (+13 more)
+Cohesion: 0.07
+Nodes (22): main(), take_screenshots(), shown(), IssuesPage, NumberItem, date_item(), MembersPage, SortItem (+14 more)
 
-### Community 4 - "changes.py"
+### Community 4 - "reader.py"
 Cohesion: 0.10
-Nodes (35): Aufbau, general_text(), function_key(), add_member(), change(), append_log(), area_text(), assign_numbers() (+27 more)
+Nodes (18): first_sheet_with_data(), guess_delimiter(), pick(), read_csv(), read_source(), read_xls(), read_xlsx(), Source (+10 more)
 
 ### Community 5 - "MainWindow"
-Cohesion: 0.10
-Nodes (4): file_hash(), StandardFileBase, UiTest, MainWindow
+Cohesion: 0.07
+Nodes (9): file_hash(), day(), ImportUiTest, run(), run(), run(), UiTest, MainWindow (+1 more)
 
 ### Community 6 - "Member"
 Cohesion: 0.09
@@ -106,16 +108,20 @@ Cohesion: 0.25
 Nodes (7): Die Excel-Liste, Einstellungen, Für Entwickler, Installation, Mitglieder Management Portal, Regeln der Berechnung, So geht es
 
 ### Community 10 - "Members"
-Cohesion: 0.07
-Nodes (7): Config, Members, DataCheckTest, MemberListTest, SettingsTest, StandardFileTest, TemplateTest
+Cohesion: 0.10
+Nodes (6): Festlegungen (nicht rückgängig machen), MemberListError, Members, DataCheckTest, MemberListTest, StandardFileTest
 
 ### Community 11 - "MemberDialog"
 Cohesion: 0.10
 Nodes (10): ConflictDialog, MemberActions, change(), retry(), change(), choice_box(), DateField, ExitDialog (+2 more)
 
 ### Community 12 - "test_store.py"
-Cohesion: 0.11
-Nodes (14): read_bytes(), backup_folder(), update_member(), save(), AddTest, FunctionsTest, write(), NumbersTest (+6 more)
+Cohesion: 0.05
+Nodes (41): Aufbau, ConfigError, parse_numbers(), function_key(), backup_folder(), backups_of(), rotate(), write_backup() (+33 more)
+
+### Community 13 - "CheckPage"
+Cohesion: 0.09
+Nodes (8): CheckPage, ColumnsPage, error_label(), ImportWizard, make_table(), SourcePage, TargetPage, ValuesPage
 
 ### Community 14 - "release"
 Cohesion: 0.22
@@ -130,8 +136,8 @@ Cohesion: 0.22
 Nodes (9): version, on, push, workflow_dispatch, branches, description, required, type (+1 more)
 
 ### Community 17 - "ClubSettings"
-Cohesion: 0.07
-Nodes (13): CLAUDE.md — member-admin ("Mitglieder Management Portal"), Entwickeln (macOS/Windows), graphify, Neuer Chat — so einsteigen, Regeln für Änderungen, Verteilung / offene Punkte (Stand 2026-11-17), Was die App kann, ClubSettings (+5 more)
+Cohesion: 0.09
+Nodes (12): CLAUDE.md — member-admin ("Mitglieder Management Portal"), Entwickeln (macOS/Windows), graphify, Neuer Chat — so einsteigen, Regeln für Änderungen, Verteilung / offene Punkte (Stand 2026-11-17), Was die App kann, ClubSettings (+4 more)
 
 ### Community 18 - "build"
 Cohesion: 0.33
@@ -142,16 +148,16 @@ Cohesion: 0.33
 Nodes (6): strategy, name, os, include, fail-fast, matrix
 
 ### Community 20 - "os"
-Cohesion: 0.20
-Nodes (8): find_inno_setup(), package(), package_mac(), package_windows(), backups_of(), rotate(), write_backup(), BackupTest
+Cohesion: 0.38
+Nodes (4): find_inno_setup(), package(), package_mac(), package_windows()
 
 ### Community 21 - "template.py"
-Cohesion: 0.13
-Nodes (21): ConfigError, add_check(), check_for(), date_check(), list_check(), number_check(), write_functions_sheet(), write_headings() (+13 more)
+Cohesion: 0.10
+Nodes (20): Config, add_check(), check_for(), date_check(), list_check(), number_check(), write_functions_sheet(), write_headings() (+12 more)
 
 ### Community 22 - "MemberEditingUiTest"
-Cohesion: 0.22
-Nodes (3): MemberEditingUiTest, fill_and_meanwhile_change_excel(), fill()
+Cohesion: 0.16
+Nodes (5): MemberEditingUiTest, fill_and_meanwhile_change_excel(), StandardFileBase, StandardFileUiTest, fill()
 
 ### Community 24 - "Ideen für das Mitglieder Management Portal"
 Cohesion: 0.18
@@ -163,17 +169,17 @@ Nodes (10): Ausgabe, Auswertungen, Bedienung und Betrieb, Daten und Excel (Fehle
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Members` connect `Members` to `club_file.py`, `birthday_calculation.py`, `main_window.py`, `changes.py`, `MainWindow`, `Member`, `test_store.py`, `ClubSettings`, `template.py`?**
-  _High betweenness centrality (0.103) - this node is a cross-community bridge._
-- **Are the 8 inferred relationships involving `Members` (e.g. with `ClubSettings` and `Stand der Umsetzung`) actually correct?**
-  _`Members` has 8 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Members` connect `Members` to `club_file.py`, `birthday_calculation.py`, `main_window.py`, `reader.py`, `MainWindow`, `Member`, `test_store.py`, `ClubSettings`, `template.py`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
+- **Are the 7 inferred relationships involving `Members` (e.g. with `ClubSettings` and `Stand der Umsetzung`) actually correct?**
+  _`Members` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **Should `club_file.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.08105022831050228 - nodes in this community are weakly interconnected._
-- **Why does `MainWindow` connect `MainWindow` to `club_file.py`, `birthday_calculation.py`, `main_window.py`, `Members`, `MemberDialog`, `template.py`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Are the 7 inferred relationships involving `MainWindow` (e.g. with `StandardFileBase` and `UiTest`) actually correct?**
-  _`MainWindow` has 7 INFERRED edges - model-reasoned connections that need verification._
+  _Cohesion score 0.05761862658414382 - nodes in this community are weakly interconnected._
+- **Why does `Aufbau` connect `test_store.py` to `club_file.py`, `birthday_calculation.py`, `main_window.py`, `reader.py`, `MainWindow`, `Member`, `Members`, `MemberDialog`, `ClubSettings`, `template.py`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Are the 6 inferred relationships involving `MainWindow` (e.g. with `ImportUiTest` and `StandardFileBase`) actually correct?**
+  _`MainWindow` has 6 INFERRED edges - model-reasoned connections that need verification._
 - **Should `birthday_calculation.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.06335204490777867 - nodes in this community are weakly interconnected._
-- **Why does `Aufbau` connect `changes.py` to `club_file.py`, `birthday_calculation.py`, `main_window.py`, `MainWindow`, `Member`, `Members`, `MemberDialog`, `test_store.py`, `ClubSettings`, `template.py`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+  _Cohesion score 0.07098765432098765 - nodes in this community are weakly interconnected._
+- **Why does `MainWindow` connect `MainWindow` to `birthday_calculation.py`, `main_window.py`, `reader.py`, `test_store.py`, `CheckPage`, `template.py`, `MemberEditingUiTest`, `ResultPage`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._

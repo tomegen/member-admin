@@ -51,6 +51,7 @@ jobs:
         python tests/test_regressions.py
         python tests/test_ui.py
         python tests/test_store.py
+        python tests/test_import.py
 
     - name: Install Inno Setup (Windows installer)
       if: matrix.name == 'windows'

@@ -7,7 +7,7 @@ UI-Texte sind deutsch (Anrede „Sie“). **Die Excel-Liste bleibt der Datenspei
 auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie hinein.
 
 ## Was die App kann
-- Start: Excel wählen (Dialog, Drag & Drop oder „Zuletzt verwendet“); `.xlsx`/`.xls`, erstes Blatt, Kopfzeile = Spaltennamen.
+- Start: Mitgliederliste öffnen (Dialog, Drag & Drop oder „Zuletzt verwendet“). Die App arbeitet nur mit dem **Standardformat**; jede andere Liste (`.xlsx`, `.xls`, `.csv`) öffnet den **Import-Assistenten** (Datei → Spalten → Werte → Prüfen/Ergänzen → neue Datei speichern; Original bleibt unverändert).
 - **Auswertungsjahr** im Kopf (Standard: ab Oktober das Folgejahr). Es steuert Geburtstage, Ehrungen, „Neue Mitglieder“.
 - Tabs: Übersicht (mit „Demnächst“: nächste 30 Tage) · **Mitglieder** (Suche, Filter; bei Standarddateien anlegen, bearbeiten inkl. Funktionen, Austritt, Nummern vergeben) · Geburtstage · Ehrungen · Statistik · Datenprüfung.
 - Die geöffnete Datei wird überwacht (`QFileSystemWatcher`): Änderungen von außen (Excel, Sync) werden automatisch neu eingelesen.
@@ -49,7 +49,10 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/` (Windows: `-Windows-Setup.exe` + `-Windows.zip`, macOS: `-Mac.dmg`; Dateinamen ohne Version) |
 | `installer/windows.iss` | Inno-Setup-Skript (Installation pro Benutzer ohne Admin, `AppId` nie ändern) |
 | `docs/` | Download-Seite für GitHub Pages (`index.html`, `start.png`, `qr-download.svg`), verlinkt `releases/latest/download/…` |
-| `example_file.xlsx` | Beispielliste mit den erwarteten Spalten (Fake-Daten) |
+| `importer/` | Import: `reader` (xlsx/xls/csv, Zeichensatz, Trennzeichen), `mapping` (Kopfzeile, Spalten-/Wertevorschläge, „Name, Vorname“ und „PLZ Ort“ trennen, `convert`, Nummern), `gender` + `first_names` (Geschlecht schätzen), `writer` (neue Standarddatei) |
+| `ui/import_wizard.py` | Import-Assistent (5 Schritte, Sammel-Ausfüllen, Schätzungen bestätigen) |
+| `example_file.xlsx` | Beispielliste im **Standardformat** (10 erfundene Personen, wird mit der App ausgeliefert, Smoke-Test/Screenshots) |
+| `tests/fixtures/old_list.xlsx` | alte Beispielliste (Format vor 0.2) für Import-Tests |
 
 Berechnung: Geburtstag n im Zeitraum, wenn das Geburtsdatum zwischen `von − n Jahre` und `bis − n Jahre` liegt.
 Ehrung n analog mit „Mitglied seit“.
@@ -58,7 +61,7 @@ Ehrung n analog mit „Mitglied seit“.
 - Stack: Python 3.12, **PySide6 (Qt)** — bewusst statt Tk/customtkinter (Tk fehlt in Homebrew-/System-Python, hässliche Datumsfelder, kein Offscreen-Test).
 - Setup: `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-dev.txt`
 - Start: `.venv/bin/python mitgliederverwaltung.py [excel]`
-- Tests: `.venv/bin/python tests/test_regressions.py`, `.venv/bin/python tests/test_ui.py` und `.venv/bin/python tests/test_store.py`
+- Tests: `.venv/bin/python tests/test_regressions.py`, `tests/test_ui.py`, `tests/test_store.py` und `tests/test_import.py` (UI-Tests lassen einen unerwartet geöffneten Import-Assistenten scheitern statt zu hängen)
   (Oberfläche läuft mit `QT_QPA_PLATFORM=offscreen`, auch für Screenshots per `widget.grab().save(...)`).
 - Build lokal: `.venv/bin/python build.py <version>` → `release/` (ignoriert; Mac-DMG; Windows-Installer nur mit Inno Setup 6). Danach gepackte App prüfen:
   `QT_QPA_PLATFORM=offscreen release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung --smoke-test example_file.xlsx`

@@ -10,37 +10,59 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 import pandas as pd
-from PySide6.QtCore import QCoreApplication, QDate, QSettings
+from PySide6.QtCore import QCoreApplication, QDate, QSettings, Qt
 from PySide6.QtWidgets import QApplication
 
 from openpyxl import load_workbook
 
 from config.config import Config
 from logic.template import write_member_template
+from model.club_file import read_bytes
+from ui.import_wizard import ImportWizard
 from ui.main_window import MainWindow, TAB_ISSUES
 
+OLD_LIST = os.path.join(ROOT, "tests", "fixtures", "old_list.xlsx")
 app = QApplication.instance() or QApplication([])
 # tests must not touch the settings of the real app
 QCoreApplication.setOrganizationName("MitgliederverwaltungTest")
 QCoreApplication.setApplicationName("tests")
 
 
+# the import assistant is modal: a test that opens it by accident fails instead of waiting forever
+def no_unexpected_import(test):
+    patcher = mock.patch.object(ImportWizard, "exec", side_effect=AssertionError("unexpected import assistant"))
+    patcher.start()
+    test.addCleanup(patcher.stop)
+
+
+def day(text):
+    return None if text is None else datetime.date.fromisoformat(text)
+
+
 class UiTest(unittest.TestCase):
 
     def setUp(self):
         QSettings().clear()
+        no_unexpected_import(self)
         self.config = Config()
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.window = MainWindow(self.config)
         self.addCleanup(self.window.close)
 
+    # a standard file; rows are [name, first name, birthday, entry, 1 = member / 0 = left, mobile]
     def write_excel(self, rows):
-        c = self.config
-        columns = [c.last_name_config, c.first_name_config, c.birthdays_config, c.member_since_config,
-                   c.member_config, c.mobile_phone_config]
         path = os.path.join(self.tmp.name, "members.xlsx")
-        pd.DataFrame(rows, columns=columns).to_excel(path, index=False)
+        write_member_template(path, self.config)
+        book = load_workbook(path)
+        sheet = book["Mitglieder"]
+        for row, (last, first, birthday, since, member, mobile) in enumerate(rows, start=2):
+            values = {1: row - 1, 2: last, 3: first, 4: "männlich", 5: day(birthday), 6: day(since),
+                      7: "aktiv" if member else "ausgetreten", 8: None if member else datetime.date(2020, 1, 1),
+                      16: mobile or None}
+            for column, value in values.items():
+                sheet.cell(row=row, column=column, value=value)
+        book.save(path)
         return path
 
     def sample(self):
@@ -211,6 +233,7 @@ class StandardFileBase(unittest.TestCase):
 
     def setUp(self):
         QSettings().clear()
+        no_unexpected_import(self)
         QSettings().setValue("editor_name", "Vorstand A")
         self.config = Config()
         self.tmp = tempfile.TemporaryDirectory()
@@ -445,17 +468,6 @@ class MemberEditingUiTest(StandardFileBase):
         self.assertEqual(self.member(3).last_name, "Ohne")
         self.assertTrue(page.numbers_button.isHidden())
 
-    def test_old_lists_can_only_be_shown(self):
-        path = os.path.join(self.tmp.name, "alt.xlsx")
-        pd.DataFrame([["Muster", "Max", "1967-06-01", "2002-05-05", 1]],
-                     columns=["Name", "Vorname", "Geburtstag", "Mitglied seit", "Mitglied"]).to_excel(path, index=False)
-        self.window.load_file(path)
-        page = self.window.members_page
-        page.table.selectRow(0)
-        self.assertEqual(page.table.rowCount(), 1)
-        self.assertFalse(page.new_button.isEnabled())
-        self.assertFalse(page.edit_button.isEnabled())
-        self.assertIn("nicht im Standardformat", page.note_label.text())
 
     def test_changes_from_outside_are_read_again(self):
         self.window.reload_if_changed()                                   # nothing changed: nothing happens
@@ -466,6 +478,112 @@ class MemberEditingUiTest(StandardFileBase):
         self.assertEqual(self.member(1).ort, "Handystadt")
         self.assertIn("außerhalb der App geändert", self.window.statusBar().currentMessage())
         self.assertIn(self.path, self.window.watcher.files())
+
+
+class ImportUiTest(unittest.TestCase):
+
+    def setUp(self):
+        QSettings().clear()
+        QSettings().setValue("editor_name", "Vorstand A")
+        self.config = Config()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.window = MainWindow(self.config)
+        self.addCleanup(self.window.close)
+        self.window.inform = lambda title, text: self.messages.append(text)
+        self.window.show_error = lambda title, text: self.messages.append(text)
+        self.messages = []
+
+    def copy(self, source, name):
+        target = os.path.join(self.tmp.name, name)
+        with open(source, "rb") as read, open(target, "wb") as write:
+            write.write(read.read())
+        return target
+
+    @staticmethod
+    def go_to_check_page(wizard):
+        wizard.restart()
+        for _ in range(3):              # columns, values, check
+            wizard.next()
+        return wizard.check_page
+
+    def test_opening_an_old_list_runs_the_import_and_opens_the_new_file(self):
+        old = self.copy(OLD_LIST, "alt.xlsx")
+        before = read_bytes(old)
+
+        def run(wizard):
+            check = self.go_to_check_page(wizard)
+            self.assertFalse(check.isComplete())                    # the gender is estimated: confirm first
+            self.assertEqual(check.table.item(0, 4).text(), "männlich")
+            check.confirm_estimates()
+            self.assertTrue(check.isComplete())
+            wizard.next()
+            wizard.target_page.club_edit.setText("TSV Test")
+            wizard.accept()
+            return wizard.result()
+
+        with mock.patch.object(ImportWizard, "exec", run):
+            self.assertTrue(self.window.load_file(old))
+        new = os.path.join(self.tmp.name, "Mitgliederliste.xlsx")
+        self.assertEqual(self.window.filename, new)
+        self.assertTrue(self.window.members.standard)
+        self.assertEqual(self.window.members.members[0].last_name, "Mustermann")
+        self.assertIn("TSV Test", self.window.file_label.text())
+        self.assertIn("1 Mitglieder wurden", self.messages[0])
+        self.assertEqual(read_bytes(old), before)
+        self.assertEqual(QSettings().value("last_file"), new)
+
+    def test_csv_without_entry_date_is_completed_for_many_rows_at_once(self):
+        path = os.path.join(self.tmp.name, "export.csv")
+        with open(path, "w", encoding="cp1252", newline="") as file:
+            file.write("Mitgliederliste\n\nAnrede;Name;Geb.\nHerr;Müller, Jürgen;01.06.1967\n"
+                       "Frau;Beispiel, Eva;13.02.1970\nFamilie;Probe, Kim;irgendwann\n")
+
+        def run(wizard):
+            self.assertEqual(wizard.source.delimiter, ";")
+            check = self.go_to_check_page(wizard)
+            self.assertFalse(check.isComplete())
+            for row in range(3):                                    # select the empty entry dates
+                check.table.item(row, 6).setSelected(True)
+            check.ask_value = lambda heading, options: "01.01.2000"
+            check.fill_selected()
+            check.table.item(2, 5).setText("03.03.1980")            # typed in the table
+            check.confirm_estimates()                               # Kim: gender of the majority
+            self.assertTrue(check.isComplete())
+            wizard.next()
+            wizard.accept()
+            return wizard.result()
+
+        with mock.patch.object(ImportWizard, "exec", run):
+            self.assertTrue(self.window.load_file(path))
+        members = self.window.members.members
+        self.assertEqual([(m.nr, m.first_name, m.gender, m.member_since) for m in members],
+                         [(1, "Jürgen", "männlich", pd.Timestamp("2000-01-01")),
+                          (2, "Eva", "weiblich", pd.Timestamp("2000-01-01")),
+                          (3, "Kim", "männlich", pd.Timestamp("2000-01-01"))])
+        self.assertEqual(members[2].birthday, pd.Timestamp("1980-03-03"))
+
+    def test_rows_can_be_left_out_and_cancel_changes_nothing(self):
+        old = self.copy(OLD_LIST, "alt.xlsx")
+        with mock.patch.object(ImportWizard, "exec", lambda wizard: 0):
+            self.assertFalse(self.window.load_file(old))
+        self.assertIs(self.window.stack.currentWidget(), self.window.welcome)
+        self.assertEqual(sorted(os.listdir(self.tmp.name)), ["alt.xlsx"])
+
+        def run(wizard):
+            check = self.go_to_check_page(wizard)
+            check.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+            self.assertFalse(check.isComplete())                    # nothing left to take over
+            return 0
+        with mock.patch.object(ImportWizard, "exec", run):
+            self.window.load_file(old)
+
+    def test_unreadable_file_is_reported(self):
+        path = os.path.join(self.tmp.name, "kaputt.xlsx")
+        with open(path, "w") as file:
+            file.write("kein Excel")
+        self.assertFalse(self.window.load_file(path))
+        self.assertIn("konnte nicht gelesen werden", self.messages[0])
 
 
 if __name__ == "__main__":

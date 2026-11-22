@@ -294,6 +294,15 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   Dialogs, nicht nach eigenem Speichern). Funktionen ohne Nr werden über einen eindeutigen Namen zugeordnet und beim
   nächsten Speichern dieses Mitglieds mit Nr geschrieben.
 
+- **AP 5 erledigt (2026-11-22):** Paket `importer/` und `ui/import_wizard.py`. Jede Datei, die nicht im
+  Standardformat ist, öffnet beim Laden den Assistenten (`MainWindow.load_file` → `start_import`); Startseite hat
+  „Liste … übernehmen“. Vornamenliste als Python-Modul `importer/first_names.py` (statt CSV, nichts extra zu packen).
+  Nummern der alten Liste bleiben, wenn gültig und eindeutig. Neue Datei heißt standardmäßig `Mitgliederliste.xlsx`
+  neben dem Original. `example_file.xlsx` ist jetzt im Standardformat; die alte liegt als
+  `tests/fixtures/old_list.xlsx`. Smoke-Test läuft den Import ohne Dialoge durch. **Noch zu tun (AP 8):** alter Leser
+  `Members.read_old_list`, alter `SettingsDialog` und QSettings-Zahlen sind nur noch Übergang/Migration →
+  aufräumen; README zum neuen Format.
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

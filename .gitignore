@@ -175,6 +175,7 @@ graphify-out/.graphify_build_state.json
 *.xlsx
 *.xls
 !example_file.xlsx
+!tests/fixtures/*.xlsx
 
 # local data folder with real member lists (never committed)
 data/

@@ -12,13 +12,15 @@ from logic.birthday_calculation import find_birthdays, write_birthdays_into_ics,
 from logic.honor_calculation import find_honors, write_honors_into_ics, write_honors_into_txt
 from logic.template import write_member_template
 from logic.upcoming import birthday_occasion, honor_occasion
-from model.club_file import file_hash, read_bytes
+from importer.reader import SourceError
+from model.club_file import file_hash, is_standard_file, read_bytes
 from model.members import MemberListError, Members
 from model.schema import BIRTHDAY, HONOR
 from store.changes import update_settings
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import save
 from ui.club_settings_dialog import ClubSettingsDialog
+from ui.import_wizard import ImportWizard
 from ui.issues_page import IssuesPage
 from ui.member_actions import MemberActions
 from ui.members_page import MembersPage
@@ -70,6 +72,7 @@ class MainWindow(QMainWindow):
         self.welcome.open_requested.connect(self.choose_file)
         self.welcome.recent_requested.connect(self.load_file)
         self.welcome.template_requested.connect(self.save_template)
+        self.welcome.import_requested.connect(lambda: self.start_import())
         self.welcome.set_recent(QSettings().value("last_file"))
         self.stack.addWidget(self.welcome)
 
@@ -167,9 +170,33 @@ class MainWindow(QMainWindow):
         folder = os.path.dirname(last_file) if last_file else QStandardPaths.writableLocation(
             QStandardPaths.StandardLocation.DownloadLocation)
         path, _ = QFileDialog.getOpenFileName(self, "Mitgliederliste auswählen", folder,
-                                              "Excel-Dateien (*.xlsx *.xls)")
+                                              "Mitgliederlisten (*.xlsx *.xls *.csv)")
         if path:
             self.load_file(path)
+
+    def inform(self, title, text):
+        QMessageBox.information(self, title, text)
+
+    # a list in another format becomes a new standard file (import assistant), which is opened then;
+    # without path the user chooses the list
+    def start_import(self, path=None):
+        if path is None:
+            folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+            path, _ = QFileDialog.getOpenFileName(self, "Liste zum Übernehmen auswählen", folder,
+                                                  "Listen (*.xlsx *.xls *.csv)")
+            if not path:
+                return False
+        try:
+            wizard = ImportWizard(path, self.config, QSettings().value("editor_name") or getpass.getuser(), self)
+        except SourceError as error:
+            self.show_error("Liste konnte nicht gelesen werden", str(error))
+            return False
+        if not wizard.exec():
+            return False
+        self.inform("Übernommen", str(wizard.imported) + " Mitglieder wurden in die neue Mitgliederliste übernommen:\n"
+                    + wizard.result_path + "\n\nIhre bisherige Liste ist unverändert. Ab jetzt arbeiten Sie mit der "
+                    "neuen Datei.")
+        return self.load_file(wizard.result_path)
 
     def show_error(self, title, text):
         QMessageBox.critical(self, title, text)
@@ -178,7 +205,10 @@ class MainWindow(QMainWindow):
         if self.filename:
             self.load_file(self.filename)
 
+    # a file in the standard format is opened; any other list goes to the import assistant first
     def load_file(self, path):
+        if not is_standard_file(path):
+            return self.start_import(path)
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             loaded_hash = file_hash(read_bytes(path))
@@ -381,7 +411,7 @@ class MainWindow(QMainWindow):
     def dropped_excel_path(event):
         for url in event.mimeData().urls():
             path = url.toLocalFile()
-            if path.lower().endswith((".xlsx", ".xls")):
+            if path.lower().endswith((".xlsx", ".xls", ".csv")):
                 return path
         return None
 

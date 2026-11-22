@@ -4,10 +4,14 @@ import sys
 import tempfile
 import unicodedata
 
+import pandas as pd
 from PySide6.QtCore import QCoreApplication, QSettings, QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from config.config import Config, ConfigError
+from importer.mapping import Table, convert, guess_header_row, suggest_columns
+from importer.reader import read_source
+from importer.writer import write_standard_file
 from logic.statistics import write_statistics_into_xlsx
 from logic.template import write_member_template
 from model.members import Members
@@ -33,6 +37,14 @@ def smoke_test(window, path):
         template = os.path.join(folder, "Vorlage.xlsx")
         write_member_template(template, window.config)
         if os.path.getsize(target) == 0 or not Members(template, window.config).standard:
+            return False
+        # the import assistant without its dialogs: the list itself becomes a new standard file
+        source = read_source(path)
+        table = Table(source, guess_header_row(source.rows, window.config))
+        rows = convert(table, suggest_columns(table, window.config), {}, pd.Timestamp.now())
+        imported = os.path.join(folder, "Import.xlsx")
+        if not write_standard_file(imported, rows, window.config, path, "Smoke-Test") or \
+                not Members(imported, window.config).standard:
             return False
     return True
 

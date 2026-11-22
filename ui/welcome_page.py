@@ -10,6 +10,7 @@ class WelcomePage(QWidget):
     open_requested = Signal()
     recent_requested = Signal(str)
     template_requested = Signal()
+    import_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -22,18 +23,18 @@ class WelcomePage(QWidget):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        subtitle = muted("Geburtstage und Ehrungen aus Ihrer Mitgliederliste (Excel) berechnen.\n"
-                         "Ihre Daten bleiben auf diesem Computer.")
+        subtitle = muted("Mitglieder pflegen, Geburtstage und Ehrungen berechnen – mit Ihrer Mitgliederliste "
+                         "(Excel).\nDie App sendet keine Daten ins Internet.")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
 
-        self.open_button = primary_button("Mitgliederliste auswählen …")
+        self.open_button = primary_button("Mitgliederliste öffnen …")
         self.open_button.setMinimumHeight(52)
         self.open_button.setMinimumWidth(320)
         self.open_button.clicked.connect(self.open_requested.emit)
         layout.addWidget(self.open_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        dropzone = QLabel("… oder die Excel-Datei (.xlsx / .xls) hierher ziehen")
+        dropzone = QLabel("… oder die Datei (.xlsx, .xls oder .csv) hierher ziehen")
         dropzone.setObjectName("dropzone")
         dropzone.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(dropzone)
@@ -45,11 +46,14 @@ class WelcomePage(QWidget):
         layout.addWidget(self.recent_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         layout.addSpacing(12)
-        template_button = QPushButton("Noch keine Liste? Leere Excel-Vorlage speichern …")
-        template_button.setObjectName("link")
-        template_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        template_button.clicked.connect(self.template_requested.emit)
-        layout.addWidget(template_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        for text, signal in (("Liste aus einem anderen Programm oder eigene Excel-Liste übernehmen …",
+                              self.import_requested),
+                             ("Noch keine Liste? Neue leere Mitgliederliste anlegen …", self.template_requested)):
+            button = QPushButton(text)
+            button.setObjectName("link")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(signal.emit)
+            layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     # offer the file that was used the last time
     def set_recent(self, path):

@@ -3,7 +3,7 @@
   "1": "club_file.py",
   "2": "birthday_calculation.py",
   "3": "main_window.py",
-  "4": "changes.py",
+  "4": "reader.py",
   "5": "MainWindow",
   "6": "Member",
   "7": "Release_Notes.md",
@@ -12,7 +12,7 @@
   "10": "Members",
   "11": "MemberDialog",
   "12": "test_store.py",
-  "13": "Exception",
+  "13": "CheckPage",
   "14": "release",
   "15": "steps",
   "16": "version",
@@ -22,6 +22,7 @@
   "20": "os",
   "21": "template.py",
   "22": "MemberEditingUiTest",
-  "23": "QWidget",
-  "24": "Ideen für das Mitglieder Management Portal"
+  "23": "ResultPage",
+  "24": "Ideen für das Mitglieder Management Portal",
+  "25": "QWidget"
 }
