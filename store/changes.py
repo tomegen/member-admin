@@ -3,11 +3,12 @@ from collections import namedtuple
 import pandas as pd
 
 from model import schema
-from model.club_file import cell_key, sheet_rows
-from model.club_settings import SETTINGS_COLUMNS, general_text, read_settings, settings_columns
+from model.club_file import cell_key, heading_columns, sheet_rows
+from model.club_settings import SETTINGS_COLUMNS, general_text, read_settings
 from model.columns import normalize
-from store.sheet import COLUMNS_BY_FIELD, COLUMNS_BY_HEADING, cell_value, is_empty, last_used_row
+from model.functions import function_key, read_functions
 from store.errors import Conflict, Duplicate, FieldConflict, SaveError
+from store.sheet import COLUMNS_BY_FIELD, COLUMNS_BY_HEADING, cell_value, is_empty, last_used_row
 
 # a line of the sheet "Änderungsprotokoll"; old and new are cell keys (see cell_key)
 LogEntry = namedtuple("LogEntry", "nr name action field old new")
@@ -52,8 +53,8 @@ def update_member(nr, base, values, action="geändert"):
 
 
 # a new member gets the next free nr and the row below the last member; same name and birthday as somebody in the
-# file raises Duplicate, unless allow_duplicate
-def add_member(values, allow_duplicate=False):
+# file raises Duplicate, unless allow_duplicate. functions: [(function, from, to, note)] of the new member
+def add_member(values, allow_duplicate=False, functions=()):
     def change(book, members):
         same = (key_of("last_name", values.get("last_name")).casefold(),
                 key_of("first_name", values.get("first_name")).casefold(),
@@ -70,7 +71,85 @@ def add_member(values, allow_duplicate=False):
         for field, value in values.items():
             if field != "nr":
                 members.set(row, field, value)
+        if functions:
+            FunctionSheet(book).append(nr, members.name(row), functions)
         return [LogEntry(nr, members.name(row), "angelegt", "", "", "")]
+    return change
+
+
+# several changes in one save, e.g. the data of a member and its functions
+def combine(*changes):
+    def change(book, members):
+        return [entry for part in changes for entry in part(book, members)]
+    return change
+
+
+# "Kassier (01.01.2020 – ), Jugendwart (2015 – 2019)" for the change log; functions are function keys
+def functions_text(functions):
+    def date(key):
+        return pd.Timestamp(key).strftime("%d.%m.%Y") if key else ""
+    return ", ".join(function + " (" + date(start) + " – " + date(end) + ")" + (" " + note if note else "")
+                     for function, start, end, note in functions)
+
+
+def wanted_keys(functions):
+    return [(function.strip(), cell_key(start), cell_key(end), note.strip()) for function, start, end, note in functions]
+
+
+class FunctionSheet:
+
+    def __init__(self, book):
+        self.sheet = book[schema.FUNCTIONS_SHEET]
+        rows = sheet_rows(self.sheet, 8)
+        columns = heading_columns(rows[0] if rows else ())
+        self.columns = [columns.get(normalize(heading)) for heading in schema.FUNCTION_HEADINGS]
+        if self.columns[0] is None or self.columns[2] is None:
+            raise SaveError("Im Blatt „Funktionen“ fehlen die Überschriften „Nr“ oder „Funktion“. Bitte in Excel "
+                            "ergänzen, dann neu einlesen.")
+
+    # values: (function, from, to, note) with dates as date, timestamp or None
+    def write(self, row, nr, name, values):
+        for column, value in zip(self.columns, (nr, name) + tuple(values)):
+            if column is None:
+                continue
+            if is_empty(value):   # also NaT, which has a year as well
+                value = None
+            elif hasattr(value, "year"):
+                value = pd.Timestamp(value).date()
+            cell = self.sheet.cell(row=row, column=column, value=value)
+            if hasattr(value, "year"):
+                cell.number_format = "DD.MM.YYYY"
+
+    def append(self, nr, name, functions):
+        row = last_used_row(self.sheet) + 1
+        for values in functions:
+            self.write(row, nr, name, values)
+            row += 1
+
+
+# the functions of a member as edited in the app: base are the function keys when read (Members.functions_of),
+# functions the wanted [(function, from, to, note)]. Rows of other members stay; if somebody changed the
+# functions of this member in the meantime, SaveError
+def update_functions(nr, base, functions):
+    def change(book, members):
+        people = [(number, members.name(row)) for row, number in members.rows()]
+        fresh, _ = read_functions(book, people)
+        current = [function for function in fresh if function.nr == nr]
+        name = dict((number, text) for number, text in people if number is not None).get(nr, "")
+        if [function_key(function) for function in current] != list(base):
+            raise SaveError("Die Funktionen von " + name + " wurden inzwischen von jemand anderem geändert. "
+                            "Bitte neu einlesen und die Änderung wiederholen.")
+        wanted = wanted_keys(functions)
+        if wanted == list(base):
+            return []
+        sheet = FunctionSheet(book)
+        rows = [function.row for function in current]
+        for row, values in zip(rows, functions):
+            sheet.write(row, nr, name, values)
+        for row in sorted(rows[len(functions):], reverse=True):
+            sheet.sheet.delete_rows(row)
+        sheet.append(nr, name, functions[len(rows):])
+        return [LogEntry(nr, name, "geändert", "Funktionen", functions_text(base), functions_text(wanted))]
     return change
 
 
@@ -111,7 +190,7 @@ def update_settings(base, new):
                             ", ".join(conflicts) + ". Bitte neu einlesen und die Änderung wiederholen.")
         sheet = book[schema.SETTINGS_SHEET]
         rows = sheet_rows(sheet, SETTINGS_COLUMNS)
-        columns = settings_columns(rows[0] if rows else ())
+        columns = heading_columns(rows[0] if rows else ())
         entries = []
         for label in changed:
             if now[label] == wanted[label]:

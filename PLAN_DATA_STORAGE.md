@@ -285,6 +285,15 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   Erinnerung der Datei wird beim Laden gesetzt, Änderung im Reiter gilt nur für den Export. Standard der Erinnerung
   im Einstellungsblatt: 7 Tage (wie bisher in der App).
 
+- **AP 4 erledigt (2026-11-22):** `model/functions.py`, `store.changes.update_functions`/`combine`/`add_member(functions=…)`,
+  Tab „Mitglieder“ (zweiter Tab; Suche, Filter Status/Abteilung, alte Listen nur Anzeige), `MemberDialog` (Reiter
+  Mitglied / Kontakt und Bank / Funktionen; speichert **nur geänderte Felder**, damit unlesbare Altwerte nicht still
+  überschrieben werden; Pflichtprüfung bei neuen Mitgliedern und bei geänderten Pflichtfeldern), `ExitDialog`,
+  `ConflictDialog` (je Feld „Ihren Wert“ oder „Wert aus der Datei“), „Nummern vergeben“ (auch beim Bearbeiten eines
+  Mitglieds ohne Nr angeboten), `save_change(change, retry)`, Dateiüberwachung (1,5 s Wartezeit, nicht während eines
+  Dialogs, nicht nach eigenem Speichern). Funktionen ohne Nr werden über einen eindeutigen Namen zugeordnet und beim
+  nächsten Speichern dieses Mitglieds mit Nr geschrieben.
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

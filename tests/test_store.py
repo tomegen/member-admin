@@ -17,7 +17,7 @@ from model.club_file import read_bytes
 from model.members import Members
 from store import backups
 from model.club_settings import ClubSettings, Occasion
-from store.changes import add_member, assign_numbers, update_member, update_settings
+from store.changes import add_member, assign_numbers, combine, update_functions, update_member, update_settings
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import lock_owner, save
 
@@ -377,6 +377,77 @@ class SettingsTest(StoreTest):
         new = ClubSettings(base.occasions, base.lists, dict(base.general, Vereinsname="TSV Beispiel"))
         save(self.path, update_settings(base, new), "A", now=NOW)
         self.assertEqual(self.read().settings.club_name, "TSV Beispiel")
+
+
+class FunctionsTest(StoreTest):
+    KASSIER = ("Kassier", datetime.date(2020, 1, 1), None, "")
+
+    def write_functions(self, rows):
+        def write(book):
+            sheet = book["Funktionen"]
+            for row, values in enumerate(rows, start=2):
+                for column, value in enumerate(values, start=1):
+                    sheet.cell(row=row, column=column, value=value)
+        self.edit_in_excel(write, whole_book=True)
+
+    def keys(self, nr):
+        from model.functions import function_key
+        return [function_key(function) for function in self.read().functions_of(nr)]
+
+    def test_functions_by_number_or_unique_name_and_findings(self):
+        self.write_functions([(1, "Max Muster", "Kassier", datetime.date(2020, 1, 1)),
+                              (None, "Beispiel, Eva", "Jugendwart", datetime.date(2015, 1, 1), datetime.date(2019, 12, 31)),
+                              (9, "Udo", "Beisitzer"),
+                              (None, "Niemand Bekannt", "Schriftführer"),
+                              (2, "Eva Beispiel", None, datetime.date(2021, 1, 1), datetime.date(2020, 1, 1))])
+        members = self.read()
+        self.assertEqual([(f.row, f.nr, f.function) for f in members.functions],
+                         [(2, 1, "Kassier"), (3, 2, "Jugendwart"), (4, 9, "Beisitzer"), (5, None, "Schriftführer"),
+                          (6, 2, "")])
+        found = [(i.row, i.message) for i in members.issues]
+        self.assertEqual(found, [(4, "Udo: Mitgliedsnummer 9 gibt es im Blatt „Mitglieder“ nicht."),
+                                 (5, "Niemand Bekannt: Mitgliedsnummer fehlt oder ist ungültig."),
+                                 (6, "Eva Beispiel: Funktion fehlt."),
+                                 (6, "Eva Beispiel: „bis“ liegt vor „von“.")])
+        self.assertEqual([f.function for f in members.functions_of(2)], ["Jugendwart", ""])
+
+    def test_functions_of_a_member_are_replaced_and_others_stay(self):
+        self.write_functions([(1, "Max Muster", "Kassier", datetime.date(2020, 1, 1)),
+                              (2, "Eva Beispiel", "Jugendwart"),
+                              (1, "Max Muster", "Beisitzer", datetime.date(2010, 1, 1), datetime.date(2019, 12, 31))])
+        base = self.keys(1)
+        saved = save(self.path, update_functions(1, base, [("Vorsitzender", datetime.date(2024, 3, 1), None, "")]),
+                     "A", now=NOW)
+        members = self.read()
+        self.assertEqual([(f.row, f.nr, f.name, f.function) for f in members.functions],
+                         [(2, 1, "Max Muster", "Vorsitzender"), (3, 2, "Eva Beispiel", "Jugendwart")])
+        self.assertEqual(members.functions_of(1)[0].start, datetime.datetime(2024, 3, 1))
+        self.assertEqual(saved.entries[0][2:5], ("geändert", "Funktionen",
+                                                 "Kassier (01.01.2020 – ), Beisitzer (01.01.2010 – 31.12.2019)"))
+        save(self.path, update_functions(1, self.keys(1), [("Vorsitzender", datetime.date(2024, 3, 1), None, ""),
+                                                          self.KASSIER]), "A", now=NOW)
+        self.assertEqual([(f.row, f.function) for f in self.read().functions],
+                         [(2, "Vorsitzender"), (3, "Jugendwart"), (4, "Kassier")])
+
+    def test_functions_changed_meanwhile_are_not_overwritten(self):
+        self.write_functions([(1, "Max Muster", "Kassier")])
+        base = self.keys(1)
+        self.write_functions([(1, "Max Muster", "Kassierer")])
+        with self.assertRaises(SaveError):
+            save(self.path, update_functions(1, base, [self.KASSIER]), "A", now=NOW)
+
+    def test_member_and_functions_in_one_save_and_new_member_with_functions(self):
+        change = combine(update_member(1, self.read().snapshot.rows[1], {"ort": "Musterstadt"}),
+                         update_functions(1, [], [self.KASSIER]))
+        saved = save(self.path, change, "A", now=NOW)
+        self.assertEqual([entry.field for entry in saved.entries], ["Ort", "Funktionen"])
+        self.assertEqual(len(os.listdir(backups.backup_folder(self.path))), 1)
+        values = {"last_name": "Neu", "first_name": "Nina", "gender": "weiblich", "status": "aktiv",
+                  "birthday": datetime.date(2001, 3, 4), "member_since": datetime.date(2026, 11, 1)}
+        save(self.path, add_member(values, functions=[("Jugendwart", None, None, "ab sofort")]), "A", now=NOW)
+        self.assertEqual([(f.nr, f.name, f.function, f.note) for f in self.read().functions_of(3)],
+                         [(3, "Nina Neu", "Jugendwart", "ab sofort")])
+        self.assertEqual(self.read().issues, [])
 
 
 class BackupTest(unittest.TestCase):

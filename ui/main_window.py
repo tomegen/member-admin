@@ -2,23 +2,26 @@ import getpass
 import os
 
 import pandas as pd
-from PySide6.QtCore import QSettings, QStandardPaths, Qt
+from PySide6.QtCore import QFileSystemWatcher, QSettings, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QInputDialog, QLabel, QMainWindow, QMessageBox, QSpinBox,
-                               QStackedWidget, QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QMainWindow, QMessageBox,
+                               QSpinBox, QStackedWidget, QTabWidget, QVBoxLayout, QWidget)
 
 from config.config import parse_numbers
 from logic.birthday_calculation import find_birthdays, write_birthdays_into_ics, write_birthdays_into_txt
 from logic.honor_calculation import find_honors, write_honors_into_ics, write_honors_into_txt
 from logic.template import write_member_template
 from logic.upcoming import birthday_occasion, honor_occasion
+from model.club_file import file_hash, read_bytes
 from model.members import MemberListError, Members
 from model.schema import BIRTHDAY, HONOR
 from store.changes import update_settings
-from store.errors import FileLocked, SaveError
+from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import save
 from ui.club_settings_dialog import ClubSettingsDialog
 from ui.issues_page import IssuesPage
+from ui.member_actions import MemberActions
+from ui.members_page import MembersPage
 from ui.overview_page import OverviewPage
 from ui.result_page import ResultPage, ResultSpec
 from ui.saving import save_file
@@ -27,7 +30,7 @@ from ui.statistics_page import StatisticsPage
 from ui.theme import secondary_button
 from ui.welcome_page import WelcomePage
 
-TAB_OVERVIEW, TAB_BIRTHDAYS, TAB_HONORS, TAB_STATISTICS, TAB_ISSUES = range(5)
+TAB_OVERVIEW, TAB_MEMBERS, TAB_BIRTHDAYS, TAB_HONORS, TAB_STATISTICS, TAB_ISSUES = range(6)
 
 
 # the evaluation is usually done for the coming year in the last months of a year
@@ -47,6 +50,15 @@ class MainWindow(QMainWindow):
         self.apply_saved_numbers()
         self.members = None
         self.filename = None
+        self.loaded_hash = None
+        self.actions = MemberActions(self)
+        # the file is watched: changes from excel or the sync service are read in again automatically
+        self.watcher = QFileSystemWatcher(self)
+        self.watcher.fileChanged.connect(self.on_file_changed)
+        self.change_timer = QTimer(self)
+        self.change_timer.setSingleShot(True)
+        self.change_timer.setInterval(1500)   # sync services and excel write in several steps
+        self.change_timer.timeout.connect(self.reload_if_changed)
         self.setWindowTitle("Mitglieder Management Portal")
         self.resize(1000, 780)
         self.setAcceptDrops(True)
@@ -99,7 +111,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(header)
 
         self.overview = OverviewPage()
-        self.overview.open_tab.connect(lambda index: self.tabs.setCurrentIndex(index))
+        self.overview.open_tab.connect(lambda name: self.tabs.setCurrentWidget(getattr(self, name)))
+        self.members_page = MembersPage()
+        self.members_page.new_requested.connect(self.actions.new_member)
+        self.members_page.edit_requested.connect(self.actions.edit_member)
+        self.members_page.exit_requested.connect(self.actions.record_exit)
+        self.members_page.numbers_requested.connect(self.actions.assign_numbers)
         self.birthdays = ResultPage(ResultSpec(
             title="Geburtstage",
             description="Runde Geburtstage im gewählten Zeitraum. Welche Geburtstage zur Auswahl stehen, "
@@ -129,6 +146,7 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self.overview, "Übersicht")
+        self.tabs.addTab(self.members_page, "Mitglieder")
         self.tabs.addTab(self.birthdays, "Geburtstage")
         self.tabs.addTab(self.honors, "Ehrungen")
         self.tabs.addTab(self.statistics_page, "Statistik")
@@ -163,7 +181,12 @@ class MainWindow(QMainWindow):
     def load_file(self, path):
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
+            loaded_hash = file_hash(read_bytes(path))
             members = Members(path, self.config)
+        except OSError as error:
+            QGuiApplication.restoreOverrideCursor()
+            self.show_error("Mitgliederliste konnte nicht geöffnet werden", str(error))
+            return False
         except MemberListError as error:
             QGuiApplication.restoreOverrideCursor()
             self.show_error("Mitgliederliste konnte nicht geöffnet werden", str(error))
@@ -172,11 +195,14 @@ class MainWindow(QMainWindow):
 
         self.members = members
         self.filename = path
+        self.loaded_hash = loaded_hash
+        self.watch(path)
         QSettings().setValue("last_file", path)
         club = members.settings.club_name
         self.file_label.setText((club + " – " if club else "") + os.path.basename(path))
         self.setWindowTitle("Mitglieder Management Portal – " + os.path.basename(path))
         self.apply_club_settings(members)
+        self.members_page.set_members(members)
         self.birthdays.set_members(members)
         self.honors.set_members(members)
         self.statistics_page.set_members(members)
@@ -236,8 +262,9 @@ class MainWindow(QMainWindow):
     def ask(self, title, text):
         return QMessageBox.question(self, title, text) == QMessageBox.StandardButton.Yes
 
-    # saves a change (store.changes) into the open standard file and reads it again; False if nothing was saved
-    def save_change(self, change):
+    # saves a change (store.changes) into the open standard file and reads it again; False if nothing was saved.
+    # retry(error) may answer a Conflict or Duplicate with a new change (after asking the user) or None
+    def save_change(self, change, retry=None):
         editor = self.editor_name()
         if editor is None:
             return False
@@ -256,11 +283,47 @@ class MainWindow(QMainWindow):
                                 "\n\nTrotzdem speichern?"):
                     return False
                 ignore_lock = True
+            except (Conflict, Duplicate) as error:
+                change = retry(error) if retry is not None else None
+                if change is None:
+                    if retry is None:
+                        self.show_error("Speichern nicht möglich", str(error))
+                    return False
             except (SaveError, OSError) as error:
                 self.show_error("Speichern nicht möglich", str(error))
                 return False
         self.load_file(self.filename)
         return True
+
+    # --- watching the file ---------------------------------------------------------------------------------------
+
+    def watch(self, path):
+        if self.watcher.files():
+            self.watcher.removePaths(self.watcher.files())
+        self.watcher.addPath(path)
+
+    def on_file_changed(self, path):
+        # a file that is replaced (excel, sync services, the app itself) is no longer watched: watch it again
+        if path not in self.watcher.files() and os.path.exists(path):
+            self.watcher.addPath(path)
+        self.change_timer.start()
+
+    # read the file again if its content changed (not after an own save, which reads it anyway); not while a
+    # dialog is open, then a little later
+    def reload_if_changed(self):
+        if not self.filename or not os.path.exists(self.filename):
+            return
+        if QApplication.activeModalWidget() is not None:
+            self.change_timer.start()
+            return
+        try:
+            changed = file_hash(read_bytes(self.filename)) != self.loaded_hash
+        except OSError:   # being written right now
+            self.change_timer.start()
+            return
+        if changed and self.load_file(self.filename):
+            self.statusBar().showMessage("Die Mitgliederliste wurde außerhalb der App geändert und neu eingelesen.",
+                                         10000)
 
     # --- settings and template ---------------------------------------------------------------------------------
 

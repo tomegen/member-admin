@@ -24,7 +24,7 @@ def make_card(title):
 
 
 class OverviewPage(QWidget):
-    open_tab = Signal(int)
+    open_tab = Signal(str)   # name of the page in the main window
 
     def __init__(self):
         super().__init__()
@@ -60,9 +60,10 @@ class OverviewPage(QWidget):
         layout.addWidget(self.upcoming_table, stretch=1)
 
         buttons = QHBoxLayout()
-        for text, index in (("Geburtstage berechnen", 1), ("Ehrungen berechnen", 2), ("Statistik anzeigen", 3)):
+        for text, page in (("Geburtstage berechnen", "birthdays"), ("Ehrungen berechnen", "honors"),
+                           ("Statistik anzeigen", "statistics_page")):
             button = primary_button(text)
-            button.clicked.connect(lambda checked=False, tab=index: self.open_tab.emit(tab))
+            button.clicked.connect(lambda checked=False, name=page: self.open_tab.emit(name))
             buttons.addWidget(button)
         buttons.addStretch()
         layout.addLayout(buttons)

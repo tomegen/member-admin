@@ -2,6 +2,7 @@ import pandas as pd
 from model import club_file
 from model.checks import plausibility_issues
 from model.club_settings import ClubSettings, read_settings
+from model.functions import read_functions
 from model.columns import detect_columns, missing_mandatory
 from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
@@ -36,6 +37,7 @@ class Members:
         self.filename = filename
         self.snapshot = None   # only for the standard file, which the app can change
         self.settings = ClubSettings()   # an old list has no settings sheet: defaults
+        self.functions = []              # rows of the sheet "Funktionen" (model.functions.Function)
         try:
             data = club_file.read_bytes(filename)
         except OSError as e:
@@ -59,9 +61,13 @@ class Members:
         except club_file.MissingColumns as e:
             raise missing_columns_error(e.missing, e.found)
         self.settings, setting_issues = read_settings(book)
-        self.issues += issues + setting_issues
+        self.functions, function_issues = read_functions(book, [(member.nr, member.full_name()) for _, member in rows])
+        self.issues += issues + setting_issues + function_issues
         self.snapshot = club_file.Snapshot(club_file.file_hash(data), keys)
         return rows
+
+    def functions_of(self, nr):
+        return [function for function in self.functions if function.nr == nr]
 
     # members that count for "birthdays", "honors" or "statistics": the active ones, the passive ones if the
     # settings of the club say so

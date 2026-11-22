@@ -611,7 +611,7 @@ class StandardFileTest(unittest.TestCase):
                                    self.person(Nr="x", Vorname="Ina", Status="ausgetreten"),
                                    self.person(Nr=9, Vorname="Tom", **{"Austritt am": datetime.date(2025, 12, 31)})])
         found = [(i.row, i.message) for i in members.issues]
-        self.assertIn((2, "Mitgliedsnummer (Nr) fehlt."), found)
+        self.assertIn((2, "Mitgliedsnummer (Nr) fehlt – im Tab „Mitglieder“ auf „Nummern vergeben“ klicken."), found)
         self.assertTrue(any(row == 2 and message.startswith("Geschlecht fehlt") for row, message in found))
         self.assertIn((4, "Mitgliedsnummer 7 ist doppelt vergeben (auch in Zeile 3)."), found)
         self.assertIn((4, "Eintritt ist nicht lesbar: irgendwann, es kann keine Ehrung berechnet werden."), found)

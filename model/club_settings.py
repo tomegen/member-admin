@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from model import schema
-from model.club_file import choice, sheet_rows, whole_number
+from model.club_file import choice, heading_columns, sheet_rows, whole_number
 from model.columns import normalize
 from model.issue import Issue
 from model.values import to_text
@@ -91,14 +91,6 @@ def general_text(key, value):
     return value
 
 
-# column numbers (1 = A) by their heading in row 1 of the settings sheet
-def settings_columns(first_row):
-    found = {}
-    for index, heading in enumerate(first_row, start=1):
-        found.setdefault(normalize(to_text(heading)), index)
-    return found
-
-
 # reads the sheet "Einstellungen": (ClubSettings, [Issue]); a missing sheet means defaults
 def read_settings(book):
     if schema.SETTINGS_SHEET not in book.sheetnames:
@@ -106,7 +98,7 @@ def read_settings(book):
     rows = sheet_rows(book[schema.SETTINGS_SHEET], SETTINGS_COLUMNS)
     if not rows:
         return ClubSettings(), []
-    columns = settings_columns(rows[0])
+    columns = heading_columns(rows[0])
     issues = []
 
     def problem(row, message):

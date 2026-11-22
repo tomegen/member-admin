@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -205,7 +206,8 @@ class UiTest(unittest.TestCase):
         self.assertEqual(names[:2], ["0_Start.png", "1_Ubersicht.png"])
 
 
-class StandardFileUiTest(unittest.TestCase):
+# a standard file with two members and the settings of a club; no tests of its own
+class StandardFileBase(unittest.TestCase):
 
     def setUp(self):
         QSettings().clear()
@@ -237,6 +239,9 @@ class StandardFileUiTest(unittest.TestCase):
         book.save(self.path)
         self.window.year_spin.setValue(2027)
         self.assertTrue(self.window.load_file(self.path))
+
+
+class StandardFileUiTest(StandardFileBase):
 
     def test_the_file_brings_numbers_gifts_reminder_and_club_name(self):
         page = self.window.birthdays
@@ -308,6 +313,159 @@ class StandardFileUiTest(unittest.TestCase):
         self.window.ask = lambda title, text: True
         self.assertTrue(self.window.save_change(update_settings(settings, new)))
         self.assertEqual(self.window.members.settings.club_name, "X")
+
+
+class MemberEditingUiTest(StandardFileBase):
+
+    def setUp(self):
+        super().setUp()
+        self.window.ask = lambda title, text: self.questions.append(text) or True
+        self.questions = []
+
+    def edit_in_excel(self, cells):
+        book = load_workbook(self.path)
+        for coordinate, value in cells.items():
+            book["Mitglieder"][coordinate] = value
+        book.save(self.path)
+
+    def member(self, nr):
+        return [m for m in self.window.members.members if m.nr == nr][0]
+
+    @staticmethod
+    def filling(values, functions=()):
+        def fill(dialog):
+            for field, value in values.items():
+                widget = dialog.widgets[field]
+                if hasattr(widget, "set_value"):
+                    widget.set_value(value)
+                elif hasattr(widget, "setCurrentText"):
+                    widget.setCurrentText(value)
+                elif hasattr(widget, "setPlainText"):
+                    widget.setPlainText(value)
+                else:
+                    widget.setText(value)
+            for function in functions:
+                dialog.add_function_row(*function)
+            dialog.accept()
+            return dialog.result()
+        return fill
+
+    def test_members_tab_lists_filters_and_searches(self):
+        page = self.window.members_page
+        self.assertEqual(self.window.tabs.widget(1), page)
+        self.assertEqual(page.table.rowCount(), 2)
+        page.status_box.setCurrentText("passiv")
+        self.assertEqual([page.table.item(r, 2).text() for r in range(page.table.rowCount())], ["Eva"])
+        page.status_box.setCurrentText("alle Einträge")
+        page.search_edit.setText("must")
+        self.assertEqual(page.count_label.text(), "1 von 2 Einträgen")
+        self.assertFalse(page.numbers_button.isVisible())
+        self.window.overview.open_tab.emit("honors")                      # buttons on the overview
+        self.assertIs(self.window.tabs.currentWidget(), self.window.honors)
+
+    def test_new_member_is_saved_with_functions_and_a_twin_is_asked_for(self):
+        from ui.member_dialog import MemberDialog
+        values = {"last_name": "Neu", "first_name": "Nina", "gender": "weiblich",
+                  "birthday": datetime.date(2001, 3, 4), "member_since": datetime.date(2026, 11, 1),
+                  "ort": "Musterstadt"}
+        with mock.patch.object(MemberDialog, "exec", self.filling(values, [("Jugendwart", None, None, "")])):
+            self.assertTrue(self.window.actions.new_member())
+        nina = self.member(3)
+        self.assertEqual((nina.first_name, nina.status, nina.ort), ("Nina", "aktiv", "Musterstadt"))
+        self.assertEqual([f.function for f in self.window.members.functions_of(3)], ["Jugendwart"])
+        with mock.patch.object(MemberDialog, "exec", self.filling(values)):
+            self.assertTrue(self.window.actions.new_member())
+        self.assertIn("steht schon in der Liste", self.questions[0])
+        self.assertEqual(len(self.window.members.members), 4)
+
+    def test_new_member_needs_the_mandatory_fields(self):
+        from ui.member_dialog import MemberDialog
+        dialog = MemberDialog(self.window.members.settings, parent=self.window)
+        dialog.widgets["last_name"].setText("Neu")
+        dialog.accept()
+        self.assertEqual(dialog.error_label.text(), "Vorname fehlt.")
+        self.assertFalse(dialog.result())
+
+    def test_only_changed_fields_are_saved(self):
+        from ui.member_dialog import MemberDialog
+        self.edit_in_excel({"E2": "irgendwann"})            # unreadable birthday of Max
+        self.window.reload()
+        with mock.patch.object(MemberDialog, "exec", self.filling({"phone": "0123 4567"})):
+            self.assertTrue(self.window.actions.edit_member(self.member(1)))
+        self.assertEqual(self.member(1).phone_number, "0123 4567")
+        self.assertEqual(load_workbook(self.path)["Mitglieder"]["E2"].value, "irgendwann")   # not lost
+
+    def test_conflict_with_a_change_in_excel_is_decided_per_field(self):
+        from ui.conflict_dialog import ConflictDialog, TAKE_THEIRS
+        from ui.member_dialog import MemberDialog
+        max_ = self.member(1)
+
+        def fill_and_meanwhile_change_excel(dialog):
+            self.edit_in_excel({"N2": "Handystadt", "O2": "0999"})     # Ort and Telefon changed on a phone
+            return self.filling({"ort": "Musterstadt", "phone": "0123", "email": "max@example.org"})(dialog)
+
+        def choose(dialog):
+            self.assertEqual([f.heading for f in dialog.conflict.fields], ["Ort", "Telefon"])
+            dialog.choices["phone"].setCurrentText(TAKE_THEIRS)
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(MemberDialog, "exec", fill_and_meanwhile_change_excel), \
+                mock.patch.object(ConflictDialog, "exec", choose):
+            self.assertTrue(self.window.actions.edit_member(max_))
+        max_ = self.member(1)
+        self.assertEqual((max_.ort, max_.phone_number, max_.email), ("Musterstadt", "0999", "max@example.org"))
+
+    def test_exit_keeps_the_member(self):
+        from ui.member_dialog import ExitDialog
+
+        def fill(dialog):
+            dialog.date_field.set_value(datetime.date(2026, 10, 31))
+            dialog.reason_box.setCurrentText("Umzug")
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(ExitDialog, "exec", fill):
+            self.assertTrue(self.window.actions.record_exit(self.member(2)))
+        eva = self.member(2)
+        self.assertEqual((eva.status, eva.exit_date, eva.exit_reason),
+                         ("ausgetreten", pd.Timestamp("2026-10-31"), "Umzug"))
+        log = [row for row in load_workbook(self.path)["Änderungsprotokoll"].iter_rows(min_row=2, values_only=True)]
+        self.assertEqual({row[4] for row in log}, {"Austritt"})
+
+    def test_rows_without_number_get_one_before_editing(self):
+        self.edit_in_excel({"A4": None, "B4": "Ohne", "C4": "Nummer", "D4": "divers",
+                            "E4": datetime.date(1990, 1, 1), "F4": datetime.date(2020, 1, 1), "G4": "aktiv"})
+        self.window.reload()
+        page = self.window.members_page
+        self.assertFalse(page.numbers_button.isHidden())
+        without = [m for m in self.window.members.members if m.nr is None][0]
+        self.assertFalse(self.window.actions.edit_member(without))       # asks, then gives numbers
+        self.assertIn("noch keine Mitgliedsnummer", self.questions[0])
+        self.assertEqual(self.member(3).last_name, "Ohne")
+        self.assertTrue(page.numbers_button.isHidden())
+
+    def test_old_lists_can_only_be_shown(self):
+        path = os.path.join(self.tmp.name, "alt.xlsx")
+        pd.DataFrame([["Muster", "Max", "1967-06-01", "2002-05-05", 1]],
+                     columns=["Name", "Vorname", "Geburtstag", "Mitglied seit", "Mitglied"]).to_excel(path, index=False)
+        self.window.load_file(path)
+        page = self.window.members_page
+        page.table.selectRow(0)
+        self.assertEqual(page.table.rowCount(), 1)
+        self.assertFalse(page.new_button.isEnabled())
+        self.assertFalse(page.edit_button.isEnabled())
+        self.assertIn("nicht im Standardformat", page.note_label.text())
+
+    def test_changes_from_outside_are_read_again(self):
+        self.window.reload_if_changed()                                   # nothing changed: nothing happens
+        self.assertEqual(self.window.statusBar().currentMessage(), "")
+        self.edit_in_excel({"N2": "Handystadt"})
+        self.window.on_file_changed(self.path)
+        self.window.reload_if_changed()
+        self.assertEqual(self.member(1).ort, "Handystadt")
+        self.assertIn("außerhalb der App geändert", self.window.statusBar().currentMessage())
+        self.assertIn(self.path, self.window.watcher.files())
 
 
 if __name__ == "__main__":

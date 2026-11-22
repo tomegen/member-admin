@@ -62,6 +62,14 @@ def sheet_rows(sheet, columns):
     return [tuple(peek(sheet, row, column) for column in range(1, columns + 1)) for row in range(1, last + 1)]
 
 
+# column numbers (1 = A) by their normalized heading in the given first row; the first of equal headings wins
+def heading_columns(first_row):
+    found = {}
+    for index, heading in enumerate(first_row, start=1):
+        found.setdefault(normalize(to_text(heading)), index)
+    return found
+
+
 def members_sheet(book):
     return book[schema.MEMBERS_SHEET] if schema.MEMBERS_SHEET in book.sheetnames else book.worksheets[0]
 
@@ -189,7 +197,7 @@ def row_issues(row, member, values, numbers_seen, today):
 
     raw_nr = to_text(values.get("nr"))
     if member.nr is None:
-        add("Mitgliedsnummer (Nr) fehlt." if raw_nr == "" else
+        add("Mitgliedsnummer (Nr) fehlt – im Tab „Mitglieder“ auf „Nummern vergeben“ klicken." if raw_nr == "" else
             "Mitgliedsnummer (Nr) ist keine ganze Zahl: " + raw_nr)
     elif member.nr in numbers_seen:
         add("Mitgliedsnummer " + str(member.nr) + " ist doppelt vergeben (auch in Zeile " +
