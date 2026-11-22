@@ -1,6 +1,6 @@
 # Ideen für das Mitglieder Management Portal
 
-Stand 2026-11-17. Sortiert nach Empfehlung. **Umgesetzt und in Release 0.1.0 (2026-11-17): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24, 26–30.** Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt).
+Stand 2026-11-22. Sortiert nach Empfehlung. **Umgesetzt und in Release 0.1.0 (2026-11-17): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24, 26–30.** **Umgesetzt für 0.2 (Branch `feature/standard-format`, noch kein Release): 6, 31–35, 45, Löschfrist** (siehe `PLAN_DATA_STORAGE.md`). Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt); 39 entfällt (Thomas: Ehrungen lassen sich je Jahr neu berechnen).
 Ideen 31–49 (2026-11-17) sind nur notiert, **nichts davon umsetzen ohne Freigabe von Thomas**. Aufwand: S = Stunden, M = ein bis wenige Tage, L = Wochenende+.
 „Beleg“ nennt, woran ich die Idee in der echten Mitgliederliste (nur Zähler) oder im Code festmache.
 
@@ -70,7 +70,7 @@ Hinweis für die Installation vor Ort: Per USB-Stick kopiert erscheint meist kei
 
 ## Mitglieder in der App pflegen (nur notiert, nicht umsetzen)
 
-**2026-11-19 ausgearbeitet in `PLAN_DATA_STORAGE.md`** (ersetzt 31–36 und 45; 39 entfällt). Der Plan gilt, die Liste unten ist nur noch Historie.
+**2026-11-19 ausgearbeitet in `PLAN_DATA_STORAGE.md`** (ersetzt 31–36 und 45; 39 entfällt). Der Plan gilt, die Liste unten ist nur noch Historie. **2026-11-22: 31–35 und 45 umgesetzt; 36 (Dateien je Mitglied) weiter offen.**
 
 Würde die Festlegung „App liest nur, schreibt nie“ aufheben → vorher Thomas fragen. Vorschlag: ein **Vereinsordner** statt einer losen Excel:
 `Mitglieder.xlsx` (Standardformat, weiter in Excel/am Handy bearbeitbar) · `Dateien/<Nr> <Name>/…` · `Sicherungen/…`.
@@ -108,6 +108,6 @@ Offene Fragen: Wo liegt die Excel (lokal, USB, OneDrive/Dropbox/Nextcloud)? Wie 
 1. ✅ 24 (Pipeline auf GitHub grün).
 2. ✅ 26–30 (Installer, DMG, feste Links, Download-Seite, Windows-Screenshots). Release 0.1.0 veröffentlicht, Download-Seite live. **Als Nächstes:** Rückmeldungen der Vorstände zur Installation sammeln.
 3. ✅ 1, 2, 3, 8, 9, 14, 16.
-4. Danach, nach Rückfrage: 31–33 (Standard-Schema, Import, sicheres Schreiben) als Grundlage für 34–36 und 45–48.
+4. ✅ 31–35, 45 (Version 0.2, siehe `PLAN_DATA_STORAGE.md`). **Als Nächstes:** Prüfliste von Hand, dann Release 0.2.0 (nur auf Anweisung). Danach naheliegend: 47 (Mitgliederentwicklung, „Austritt am“ gibt es jetzt), 41 (E-Mail-Verteiler, Feld E-Mail gibt es jetzt), 36.
 5. 13 (Urkunden): größter Nutzen bei Ehrungen, braucht eine Vorlage vom Verein; zurückgestellt.
 6. Offen und klein: 10/39 (überfällige Ehrungen), 12, 17 (Hilfe), 18, 20, 41.

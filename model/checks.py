@@ -12,9 +12,8 @@ def age_on(birthday, day):
     return years - 1 if shift_years(birthday, years) > day else years
 
 
-# findings that do not depend on a single empty cell: members is [(excel row, Member)];
-# since_label is the heading of the entry date in the file ("Mitglied seit" in old lists, "Eintritt" in the standard)
-def plausibility_issues(rows, today, since_label="Mitglied seit"):
+# findings that do not depend on a single empty cell: members is [(excel row, Member)]
+def plausibility_issues(rows, today):
     issues = []
     names = {}
     for row, member in rows:
@@ -28,10 +27,10 @@ def plausibility_issues(rows, today, since_label="Mitglied seit"):
                 issues.append(Issue(row, name, active, "Der Geburtstag ergibt ein Alter von " + str(age) +
                                     " Jahren – Tippfehler beim Jahr?"))
         if not pd.isna(since) and since > today + pd.Timedelta(days=366):
-            issues.append(Issue(row, name, active, since_label + " liegt mehr als ein Jahr in der Zukunft – "
+            issues.append(Issue(row, name, active, "Eintritt liegt mehr als ein Jahr in der Zukunft – "
                                                    "Tippfehler beim Jahr?"))
         if not pd.isna(birthday) and not pd.isna(since) and since < birthday:
-            issues.append(Issue(row, name, active, since_label + " liegt vor dem Geburtstag."))
+            issues.append(Issue(row, name, active, "Eintritt liegt vor dem Geburtstag."))
 
         # same name and same birthday: most likely entered twice (same name only is often family)
         if member.full_name() and not pd.isna(birthday):

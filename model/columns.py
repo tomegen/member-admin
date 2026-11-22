@@ -49,6 +49,3 @@ def detect_columns(headings, config):
                 break
     return found
 
-
-def missing_mandatory(found):
-    return [FIELDS[field][1] for field, heading in found.items() if heading is None and FIELDS[field][3]]

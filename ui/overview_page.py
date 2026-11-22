@@ -78,9 +78,9 @@ class OverviewPage(QWidget):
         self.new_card[1].setText(str(members.calculate_new_members(year)))
         self.new_card[2].setText("mit Eintritt im Jahr " + str(year))
         self.inactive_card[1].setText(str(members.calculate_inactive()))
-        self.active_card[2].setText("aktiv und passiv" if members.standard else "mit Mitglied = 1")
-        self.inactive_card[2].setText(("ausgetreten oder ohne gültigen Status" if members.standard else
-                                       "Mitglied = 0 oder leer") + " – zählen nicht für Geburtstage und Ehrungen")
+        self.active_card[2].setText("aktiv und passiv")
+        self.inactive_card[2].setText("ausgetreten oder ohne gültigen Status – zählen nicht für Geburtstage und "
+                                      "Ehrungen")
         self.issues_card[1].setText(str(len(members.issues)))
         if active_issues:
             self.issues_card[2].setText(str(active_issues) + " davon bei Mitgliedern – siehe Tab „Datenprüfung“")

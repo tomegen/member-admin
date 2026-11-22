@@ -1,4 +1,25 @@
 
+# Version 0.2.0
+Release Date: noch nicht veröffentlicht <br/><br>
+
+**Die Excel-Datei wird zur gemeinsamen Mitgliederdatenbank.** Sie bleibt in Excel, Google Tabellen und am Handy
+bearbeitbar und kann in Dropbox, OneDrive/SharePoint, Google Drive oder Nextcloud geteilt werden. <br>
+Neu: Standardformat mit Blättern Mitglieder, Funktionen, Einstellungen, Änderungsprotokoll und Info
+(Auswahllisten, Datumsprüfung, Mitgliedsnummer, Geschlecht, Status aktiv/passiv/ausgetreten, Austritt, E-Mail,
+Abteilung, Beitragsklasse, Bemerkung). <br>
+Neu: Tab „Mitglieder“ – anlegen, bearbeiten, Austritt erfassen, Funktionen/Ämter, Nummern vergeben. <br>
+Neu: Sicheres Speichern – Sicherung vor jedem Speichern (Ordner „Sicherungen“), Änderungen anderer bleiben erhalten,
+Rückfrage nur bei gleichzeitig geändertem Feld, Schutz bei in Excel geöffneter Datei, Änderungsprotokoll. <br>
+Neu: Import-Assistent für bestehende Listen (xlsx, xls, csv): Spalten- und Wertevorschläge, „Name, Vorname“ und
+„PLZ Ort“ trennen, fehlende Angaben für viele Zeilen auf einmal ergänzen, Geschlecht aus dem Vornamen schätzen. <br>
+Neu: Liste abgleichen (z. B. Verbandsexport, E-Mail-Liste) und Konfliktkopien der Cloud-Dienste zusammenführen. <br>
+Neu: Einstellungen des Vereins in der Datei: Anlässe mit Geschenk (erscheint in Vorschau und Exporten),
+Auswahllisten, Vereinsname, Erinnerung, ob passive Mitglieder zählen, Löschfrist. <br>
+Neu: Löschfrist für Ausgetretene mit Hinweis und Löschen nach Bestätigung (Protokoll wird anonymisiert). <br>
+Neu: Die geöffnete Datei wird überwacht und bei Änderungen von außen neu eingelesen. <br>
+Geändert: Listen in einem anderen Format werden nicht mehr direkt ausgewertet, sondern einmalig übernommen; die
+bisherige Liste bleibt unverändert. Die in 0.1 gewählten Geburtstage/Jubiläen gehen in die neue Datei über. <br><br>
+
 # Version 0.1.0
 Release Date: 17.11.2026 <br/><br>
 

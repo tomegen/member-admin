@@ -49,8 +49,8 @@ class MembersPage(QWidget):
         layout.setContentsMargins(30, 24, 30, 24)
         layout.setSpacing(12)
         layout.addWidget(heading("Mitglieder"))
-        self.note_label = muted("")
-        layout.addWidget(self.note_label)
+        layout.addWidget(muted("Doppelklick auf eine Zeile zum Bearbeiten. Gespeichert wird direkt in der "
+                               "Mitgliederliste."))
 
         filters = QHBoxLayout()
         self.search_edit = QLineEdit()
@@ -124,14 +124,7 @@ class MembersPage(QWidget):
         self.department_box.setCurrentText(selected if selected in departments else ALL_DEPARTMENTS)
         self.department_box.setVisible(bool(departments))
         self.department_box.blockSignals(False)
-        editable = members.standard
-        self.note_label.setText("Doppelklick auf eine Zeile zum Bearbeiten. Gespeichert wird direkt in der "
-                                "Mitgliederliste." if editable else
-                                "Diese Liste ist noch nicht im Standardformat der App, deshalb kann sie hier nur "
-                                "angezeigt werden. Bearbeiten Sie sie in Excel.")
-        self.new_button.setEnabled(editable)
-        self.merge_action.setEnabled(editable)
-        self.numbers_button.setVisible(editable and any(m.nr is None for m in members.members))
+        self.numbers_button.setVisible(any(m.nr is None for m in members.members))
         due = len(members.deletion_due())
         self.due_button.setText("Löschfrist: " + str(due) + " löschen …")
         self.due_button.setVisible(due > 0)
@@ -186,12 +179,11 @@ class MembersPage(QWidget):
 
     def update_buttons(self):
         member = self.selected_member()
-        editable = self.members is not None and self.members.standard
-        self.edit_button.setEnabled(editable and member is not None)
-        self.exit_button.setEnabled(editable and member is not None and member.status != schema.LEFT)
-        self.delete_action.setEnabled(editable and member is not None)
+        self.edit_button.setEnabled(member is not None)
+        self.exit_button.setEnabled(member is not None and member.status != schema.LEFT)
+        self.delete_action.setEnabled(member is not None)
 
     def request(self, signal):
         member = self.selected_member()
-        if member is not None and self.members.standard:
+        if member is not None:
             signal.emit(member)

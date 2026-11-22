@@ -58,7 +58,7 @@ class StoreTest(unittest.TestCase):
                 sheet.cell(row=row, column=position[heading], value=value)
 
     def read(self):
-        return Members(self.path, self.config, today=datetime.date(2026, 11, 22))
+        return Members(self.path, today=datetime.date(2026, 11, 22))
 
     def member(self, nr):
         return [member for member in self.read().members if member.nr == nr][0]
@@ -542,7 +542,7 @@ class ConflictCopyTest(StoreTest):
         book = load_workbook(copy)
         book["Mitglieder"]["N2"] = "Kopiestadt"
         book.save(copy)
-        current, other = self.read(), Members(copy, self.config)
+        current, other = self.read(), Members(copy)
         incoming = [(dict(member_values(m), nr=m.nr), set(member_values(m))) for m in other.members]
         items, only = compare(incoming, current.members, by_number=True)
         self.assertEqual([(item.kind, [d.incoming for d in item.differences]) for item in items],

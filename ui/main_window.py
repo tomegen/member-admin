@@ -28,7 +28,6 @@ from ui.members_page import MembersPage
 from ui.overview_page import OverviewPage
 from ui.result_page import ResultPage, ResultSpec
 from ui.saving import save_file
-from ui.settings_dialog import SettingsDialog
 from ui.statistics_page import StatisticsPage
 from ui.theme import secondary_button
 from ui.welcome_page import WelcomePage
@@ -218,7 +217,7 @@ class MainWindow(QMainWindow):
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             loaded_hash = file_hash(read_bytes(path))
-            members = Members(path, self.config)
+            members = Members(path)
         except OSError as error:
             QGuiApplication.restoreOverrideCursor()
             self.show_error("Mitgliederliste konnte nicht geöffnet werden", str(error))
@@ -252,8 +251,7 @@ class MainWindow(QMainWindow):
 
     # conflict copies of the open file (store.conflict_copies); shown on the members tab
     def update_conflict_copies(self):
-        standard = self.members is not None and self.members.standard
-        copies = set(conflict_copies(self.filename, self.members.file_id)) if standard else set()
+        copies = set(conflict_copies(self.filename, self.members.file_id)) if self.members is not None else set()
         self.members_page.set_conflict_copies(len(copies))
         return copies
 
@@ -281,18 +279,13 @@ class MainWindow(QMainWindow):
             self.overview.refresh(self.members, self.year_spin.value(), self.birthdays.spec.numbers,
                                   self.honors.spec.numbers)
 
-    # a standard file brings the settings of its club (numbers, gifts, reminder); an old list uses the numbers
-    # chosen on this computer
+    # the file brings the settings of its club (numbers, gifts, reminder)
     def apply_club_settings(self, members):
         settings = members.settings
-        if members.standard:
-            self.birthdays.set_numbers(settings.numbers(BIRTHDAY, self.default_birthdays))
-            self.honors.set_numbers(settings.numbers(HONOR, self.default_honors))
-            self.birthdays.set_reminder(settings.reminder_days)
-            self.honors.set_reminder(settings.reminder_days)
-        else:
-            self.birthdays.set_numbers(self.config.birthday_config)
-            self.honors.set_numbers(self.config.honor_config)
+        self.birthdays.set_numbers(settings.numbers(BIRTHDAY, self.default_birthdays))
+        self.honors.set_numbers(settings.numbers(HONOR, self.default_honors))
+        self.birthdays.set_reminder(settings.reminder_days)
+        self.honors.set_reminder(settings.reminder_days)
         self.birthdays.set_gifts(settings.gifts(BIRTHDAY))
         self.honors.set_gifts(settings.gifts(HONOR))
 
@@ -380,6 +373,8 @@ class MainWindow(QMainWindow):
 
     # --- settings and template ---------------------------------------------------------------------------------
 
+    # numbers chosen in the settings of version 0.1 on this computer: they go into the settings sheet of the files
+    # that are created or imported here (write_member_template uses the config)
     def apply_saved_numbers(self):
         settings = QSettings()
         for key, attribute in (("birthday_numbers", "birthday_config"), ("honor_numbers", "honor_config")):
@@ -390,18 +385,8 @@ class MainWindow(QMainWindow):
                 except ValueError:
                     settings.remove(key)
 
+    # the settings of the club are saved in the member file itself
     def open_settings(self):
-        if self.members is not None and self.members.standard:
-            self.open_club_settings()
-            return
-        dialog = SettingsDialog(self.config.birthday_config, self.config.honor_config, self.default_birthdays,
-                                self.default_honors, self)
-        if not dialog.exec():
-            return
-        self.set_numbers(dialog.birthdays, dialog.honors)
-
-    # the settings of a standard file are saved in the file itself
-    def open_club_settings(self):
         dialog = ClubSettingsDialog(self.members.settings, self.default_birthdays, self.default_honors,
                                     QSettings().value("editor_name") or getpass.getuser(), self)
         if not dialog.exec():
@@ -409,20 +394,6 @@ class MainWindow(QMainWindow):
         QSettings().setValue("editor_name", dialog.editor_name)
         if dialog.settings.areas() != self.members.settings.areas():
             self.save_change(update_settings(self.members.settings, dialog.settings))
-
-    # remember the selectable numbers (nothing is stored when they are the defaults) and show them
-    def set_numbers(self, birthdays, honors):
-        settings = QSettings()
-        for key, numbers, default in (("birthday_numbers", birthdays, self.default_birthdays),
-                                      ("honor_numbers", honors, self.default_honors)):
-            if numbers == default:
-                settings.remove(key)
-            else:
-                settings.setValue(key, ", ".join(str(number) for number in numbers))
-        self.config.birthday_config, self.config.honor_config = list(birthdays), list(honors)
-        self.birthdays.set_numbers(birthdays)
-        self.honors.set_numbers(honors)
-        self.refresh_overview()
 
     def save_template(self):
         save_file(self, "Mitgliederliste_Vorlage.xlsx", "Excel-Datei (*.xlsx)",

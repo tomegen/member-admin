@@ -239,10 +239,19 @@ zusätzlich Import, Anlegen, Bearbeiten, Konflikt).
   - Konfliktkopien: erkannt über die Datei-ID, `Sicherungen/` ausgenommen.
   - Löschfrist, Einstellungsblatt mit Lücken und Standardwerten, Geschenk im Export.
   - UI offscreen: Mitglied anlegen/bearbeiten, Import-Assistent komplett, Konfliktdialog.
-- **Von Hand (Checkliste vor dem Release):** Standarddatei bearbeiten und speichern in Excel Windows, Excel Mac,
-  Excel iOS/Android, Google Tabellen (Drive), LibreOffice, Nextcloud Office. Danach in der App: Daten korrekt,
-  Datumswerte korrekt, Dropdowns ggf. repariert. Außerdem eine echte Konfliktkopie mit Dropbox oder Nextcloud
-  erzeugen und zusammenführen.
+- **Von Hand (Checkliste vor dem Release, nur mit erfundenen Daten, z. B. einer Kopie von `example_file.xlsx`):**
+  - [ ] Für jedes Programm – Excel Windows, Excel Mac, Excel iOS/Android, Google Tabellen (Datei in Drive, am Handy
+    bearbeiten), LibreOffice/Nextcloud Office: ein Mitglied ändern (Datum, Status per Auswahl), eine Zeile ohne Nr
+    ergänzen, speichern. Dann in der App: Werte und Daten stimmen, Datenprüfung sinnvoll, „Nummern vergeben“ geht,
+    danach in der App etwas speichern und die Datei wieder im Programm öffnen (Auswahllisten noch da, keine
+    Reparatur-Meldung).
+  - [ ] Datei in Excel geöffnet lassen und in der App speichern: Mac → Rückfrage „trotzdem speichern“; Windows →
+    Hinweis, dass die Datei gesperrt ist.
+  - [ ] Echte Konfliktkopie erzeugen (Dropbox oder Nextcloud: auf zwei Geräten offline ändern, dann online gehen),
+    App öffnen: Kopie wird angeboten, Abgleich übernimmt den Wert, Kopie liegt danach in „Sicherungen“.
+  - [ ] Eine echte alte Liste (lokal in `data/`, **nicht committen**) importieren: Zuordnungen und Schätzungen plausibel;
+    nur Zähler berichten.
+  - [ ] Windows-Installer aus der CI auf einem echten Windows-PC: Import, Speichern, Sicherungen-Ordner.
 - Beispieldateien: `example_file.xlsx` im neuen Format, dazu `tests/fixtures/` mit erfundenen Altlisten
   (Titelzeilen, CSV, kombinierte Spalten).
 
@@ -318,6 +327,16 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   **Dabei behoben:** Leeren eines Feldes wirkte nicht (`sheet.cell(..., value=None)` setzt in openpyxl nichts) →
   `store.sheet.write_cell`; betraf Mitglied-Dialog (AP 4), Funktionen und Einstellungslisten. Suche nach
   Konfliktkopien übersteht einen verschwundenen Ordner.
+
+- **AP 8 erledigt (2026-11-22):** Aufgeräumt – alter Listen-Leser (`Members` liest nur noch das Standardformat,
+  fremde Formate → `MemberListError` mit Hinweis auf den Import; Parameter `config` entfällt), alter
+  Einstellungsdialog und `set_numbers`, Erinnerung in `QSettings`, `missing_mandatory`, `since_label`. Die in 0.1
+  gewählten Zahlen gehen über `apply_saved_numbers` weiter in neue Dateien. Tests der alten Liste auf Standarddateien
+  bzw. `parse_date` umgestellt. Smoke-Test speichert zusätzlich in der importierten Kopie (anlegen, ändern, Sicherung)
+  und bricht bei fremden Dateien mit Exit 2 ab statt den Assistenten zu öffnen. Doku: README (neu für Anwender),
+  `Release_Notes.md` 0.2.0, `docs/index.html` + `docs/start.png`, `CLAUDE.md` (Festlegungen), `IDEAS.md`.
+  **Offen bis zum Release:** Prüfliste von Hand (oben, Abschnitt 7), danach Merge nach `main` und Release 0.2.0 nur
+  auf Anweisung.
 
 ## 9. Doku nach Umsetzung
 

@@ -167,7 +167,7 @@ class MemberActions:
             if not self.numbers_ready():
                 return False
             try:
-                other = Members(copy, self.window.config)
+                other = Members(copy)
             except MemberListError as error:
                 self.window.show_error("Konfliktkopie konnte nicht gelesen werden", str(error))
                 return False

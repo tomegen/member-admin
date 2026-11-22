@@ -180,7 +180,7 @@ class WriterTest(ImportTest):
         target = os.path.join(self.tmp.name, "Mitglieder.xlsx")
         self.assertEqual(write_standard_file(target, rows, self.config, OLD_LIST, "Vorstand A", "TSV Beispiel"), 1)
         self.assertEqual(read_bytes(OLD_LIST), before)
-        members = Members(target, self.config)
+        members = Members(target)
         max_ = members.members[0]
         self.assertTrue(members.standard)
         self.assertEqual((max_.nr, max_.last_name, max_.gender, max_.status, max_.plz, max_.iban),
@@ -200,7 +200,7 @@ class WriterTest(ImportTest):
         rows[2].include = False
         target = os.path.join(self.tmp.name, "Mitglieder.xlsx")
         write_standard_file(target, rows, self.config, path, "A")
-        members = Members(target, self.config)
+        members = Members(target)
         self.assertEqual([m.first_name for m in members.members], ["Max", "Eva"])
         self.assertEqual(members.settings.lists["Abteilungen"], ["Fußball", "Tennis"])
 

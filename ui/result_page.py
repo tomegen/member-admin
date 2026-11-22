@@ -1,5 +1,5 @@
 import pandas as pd
-from PySide6.QtCore import QDate, QSettings, Qt
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDateEdit, QGridLayout, QHBoxLayout, QHeaderView,
                                QLabel, QPushButton, QRadioButton, QSpinBox, QTableWidget, QTableWidgetItem,
                                QVBoxLayout, QWidget)
@@ -117,8 +117,7 @@ class ResultPage(QWidget):
         self.reminder_spin.setSuffix(" Tage vorher")
         self.reminder_spin.setSpecialValueText("keine")
         self.reminder_spin.setToolTip("Erinnerung (9 Uhr) vor jedem Termin in der Kalenderdatei.")
-        self.reminder_spin.setValue(int(QSettings().value("reminder_days", 7)))
-        self.reminder_spin.valueChanged.connect(lambda days: QSettings().setValue("reminder_days", days))
+        self.reminder_spin.setValue(7)   # the file of the club sets it (set_reminder)
         option_row.addWidget(self.reminder_spin)
         option_row.addStretch()
         layout.addLayout(option_row)
@@ -172,7 +171,7 @@ class ResultPage(QWidget):
         self.table.setColumnHidden(self.GIFT_COLUMN, not self.spec.gifts)
         self.refresh()
 
-    # the reminder of the club (settings sheet); a change here is only for this export and is not saved
+    # the reminder of the club (settings sheet); a change here is only for the next export and is not saved
     def set_reminder(self, days):
         self.reminder_spin.blockSignals(True)
         self.reminder_spin.setValue(days)

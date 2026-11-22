@@ -9,6 +9,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+import numpy
 import pandas as pd
 from unittest import mock
 
@@ -27,6 +28,7 @@ from model import schema
 from model.club_file import choice
 from model.member import Member
 from model.members import Members, MemberListError
+from model.values import parse_date, to_text
 
 JAN_1_2027 = pd.Timestamp("2027-01-01")
 DEC_31_2027 = pd.Timestamp("2027-12-31")
@@ -35,6 +37,40 @@ DEC_31_2027 = pd.Timestamp("2027-12-31")
 def make_member(birthday, member_since="2000-01-01", first_name="Max", last_name="Müßig", status=schema.ACTIVE):
     return Member(last_name, first_name, birthday=pd.Timestamp(birthday), member_since=pd.Timestamp(member_since),
                   status=status)
+
+
+# a new standard file per test; rows are written into it like somebody typing in excel
+class StandardBase(unittest.TestCase):
+    TODAY = pd.Timestamp("2026-11-14")
+    HEADINGS = [column.heading for column in schema.MEMBER_COLUMNS]
+
+    def setUp(self):
+        self.config = Config()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "Mitglieder.xlsx")
+        write_member_template(self.path, self.config)
+
+    # rows are {heading: value}; they are written below the heading of the template (like somebody typing in excel)
+    def write_rows(self, rows, headings=None):
+        from openpyxl import load_workbook
+        book = load_workbook(self.path)
+        sheet = book["Mitglieder"]
+        if headings is not None:
+            for index, heading in enumerate(headings, start=1):
+                sheet.cell(row=1, column=index, value=heading)
+        position = {sheet.cell(row=1, column=index).value: index for index in range(1, sheet.max_column + 1)}
+        for number, values in enumerate(rows, start=2):
+            for heading, value in values.items():
+                sheet.cell(row=number, column=position[heading], value=value)
+        book.save(self.path)
+        return Members(self.path, today=self.TODAY)
+
+    def person(self, **values):
+        row = {"Nr": 1, "Name": "Muster", "Vorname": "Max", "Geschlecht": "männlich",
+               "Geburtstag": datetime.date(1967, 6, 1), "Eintritt": datetime.date(2002, 5, 5), "Status": "aktiv"}
+        row.update(values)
+        return row
 
 
 class LeapDayTest(unittest.TestCase):
@@ -116,21 +152,7 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(pd.Timestamp(table["Datum"][0]), pd.Timestamp("2027-02-01"))
 
 
-class MemberListTest(unittest.TestCase):
-
-    def setUp(self):
-        self.config = Config()
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-
-    def write_excel(self, rows, drop=()):
-        c = self.config
-        columns = [c.last_name_config, c.first_name_config, c.birthdays_config, c.member_since_config,
-                   c.member_config, c.mobile_phone_config]
-        data = pd.DataFrame(rows, columns=columns).drop(columns=list(drop))
-        path = os.path.join(self.tmp.name, "members.xlsx")
-        data.to_excel(path, index=False)
-        return path
+class MemberListTest(StandardBase):
 
     def test_config_is_found_independent_of_working_directory(self):
         old_cwd = os.getcwd()
@@ -145,96 +167,69 @@ class MemberListTest(unittest.TestCase):
             Config(path=os.path.join(self.tmp.name, "does-not-exist.ini"))
 
     def test_missing_optional_column_is_allowed(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", 1, "0171"]],
-                                drop=[self.config.mobile_phone_config])
-        members = Members(path, self.config)
-        self.assertEqual(len(members.members), 1)
-        self.assertEqual(members.members[0].mobile_phone, "")
+        from openpyxl import load_workbook
+        book = load_workbook(self.path)
+        book["Mitglieder"].delete_cols(16)                                  # Mobil
+        book.save(self.path)
+        members = self.write_rows([self.person()])
+        self.assertEqual((len(members.members), members.members[0].mobile_phone, members.issues), (1, "", []))
 
-    def test_missing_mandatory_column_names_the_column(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", 1, "0171"]],
-                                drop=[self.config.member_since_config])
-        with self.assertRaises(MemberListError) as error:
-            Members(path, self.config)
-        self.assertIn(self.config.member_since_config, str(error.exception))
-
-    def test_unreadable_file_raises_a_readable_error(self):
+    def test_unreadable_file_and_other_lists_raise_a_readable_error(self):
         path = os.path.join(self.tmp.name, "broken.xlsx")
         with open(path, "w") as file:
             file.write("das ist keine Excel-Datei")
-        with self.assertRaises(MemberListError):
-            Members(path, self.config)
-
-    def test_empty_member_cell_is_not_counted_and_reported(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", None, ""],
-                                 ["Beispiel", "Eva", "1970-01-01", "2021-01-01", 1, ""]])
-        members = Members(path, self.config)
-        self.assertEqual([m.status for m in members.members], ["", schema.ACTIVE])
-        self.assertEqual(members.calculate_members(), 1)
-        self.assertEqual(members.calculate_inactive(), 1)
-        self.assertEqual([(i.row, i.name) for i in members.issues], [(2, "Max Muster")])
-
-    def test_missing_dates_are_collected_with_excel_row_and_activity(self):
-        path = self.write_excel([["Muster", "Max", None, "2020-03-01", 1, ""],
-                                 ["Beispiel", "Eva", "1970-01-01", None, 0, ""]])
-        members = Members(path, self.config)
-        found = [(i.row, i.name, i.active, i.message.split(" ")[0]) for i in members.issues]
-        self.assertEqual(found, [(2, "Max Muster", True, "Geburtstag"), (3, "Eva Beispiel", False, "Mitglied")])
-        self.assertTrue(pd.isna(members.members[0].birthday))
+        old_list = os.path.join(ROOT, "tests", "fixtures", "old_list.xlsx")
+        for wrong in (path, old_list, os.path.join(self.tmp.name, "fehlt.xlsx")):
+            with self.assertRaises(MemberListError):
+                Members(wrong)
+        with self.assertRaises(MemberListError) as error:
+            Members(old_list)
+        self.assertIn("importieren", str(error.exception))
 
     def test_completely_empty_rows_are_skipped(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", 1, ""],
-                                 [None, None, None, None, None, None]])
-        members = Members(path, self.config)
-        self.assertEqual(len(members.members), 1)
+        members = self.write_rows([self.person(), {}, self.person(Nr=2, Vorname="Eva")])
+        self.assertEqual([(m.nr, m.first_name) for m in members.members], [(1, "Max"), (2, "Eva")])
         self.assertEqual(members.issues, [])
 
     def test_new_members_for_given_year(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2027-03-01", 1, ""],
-                                 ["Beispiel", "Eva", "1970-01-01", "2021-01-01", 1, ""]])
-        members = Members(path, self.config)
-        self.assertEqual(members.calculate_new_members(2027), 1)
-        self.assertEqual(members.calculate_new_members(2021), 1)
+        members = self.write_rows([self.person(Eintritt=datetime.date(2027, 3, 1)),
+                                   self.person(Nr=2, Vorname="Eva", Eintritt=datetime.date(2021, 1, 1))])
+        self.assertEqual((members.calculate_new_members(2027), members.calculate_new_members(2021)), (1, 1))
+
+    def test_dates_typed_as_text_or_numbers(self):
+        members = self.write_rows([self.person(Geburtstag=28353, Eintritt="2021-01-01"),
+                                   self.person(Nr=2, Vorname="Eva", Geburtstag="03.02.1970")])
+        self.assertEqual([m.birthday for m in members.members], [pd.Timestamp("1977-08-16"), pd.Timestamp("1970-02-03")])
+        self.assertEqual(members.members[0].member_since, pd.Timestamp("2021-01-01"))
+
+    def test_numbers_in_text_columns_have_no_decimal_point(self):
+        self.assertEqual(self.write_rows([self.person(Mobil=1711234567.0)]).members[0].mobile_phone, "1711234567")
+
+    def test_no_personal_data_on_console(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.write_rows([self.person(Name="Geheimname")])
+        self.assertNotIn("Geheimname", output.getvalue())
+
+
+class ValuesTest(unittest.TestCase):
 
     def test_excel_serial_numbers_and_german_text_dates(self):
         # number cells are excel serial days (28353 = 16.08.1977), text dates are day first (03.02. = 3 February)
-        path = self.write_excel([["Muster", "Max", 28353, 36526, 1, ""],
-                                 ["Beispiel", "Eva", "03.02.1970", "2021-01-01", 1, ""]])
-        members = Members(path, self.config)
-        self.assertEqual(members.members[0].birthday, pd.Timestamp("1977-08-16"))
-        self.assertEqual(members.members[0].member_since, pd.Timestamp("2000-01-01"))
-        self.assertEqual(members.members[1].birthday, pd.Timestamp("1970-02-03"))
+        self.assertEqual(parse_date(28353), pd.Timestamp("1977-08-16"))
+        self.assertEqual(parse_date(numpy.int64(36526)), pd.Timestamp("2000-01-01"))   # a pure number column
+        self.assertEqual(parse_date("03.02.1970"), pd.Timestamp("1970-02-03"))
+        self.assertEqual(parse_date(datetime.datetime(1970, 2, 3, 12, 30)), pd.Timestamp("1970-02-03"))
 
     def test_iso_text_dates_are_not_read_day_first(self):
         # "1967-06-01" is 1 June (day first would make it 6 January), "13.02.1970" is 13 February
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", 1, ""],
-                                 ["Beispiel", "Eva", "13.02.1970", "2021-12-01", 1, ""]])
-        members = Members(path, self.config)
-        self.assertEqual([m.birthday for m in members.members], [pd.Timestamp("1967-06-01"), pd.Timestamp("1970-02-13")])
-        self.assertEqual(members.members[1].member_since, pd.Timestamp("2021-12-01"))
+        self.assertEqual(parse_date("1967-06-01"), pd.Timestamp("1967-06-01"))
+        self.assertEqual(parse_date("13.02.1970"), pd.Timestamp("1970-02-13"))
 
-    def test_unreadable_date_text_is_reported(self):
-        path = self.write_excel([["Muster", "Max", "irgendwann", "2020-03-01", 1, ""]])
-        members = Members(path, self.config)
-        self.assertTrue(pd.isna(members.members[0].birthday))
-        self.assertIn("nicht lesbar: irgendwann", members.issues[0].message)
-
-    def test_serial_numbers_in_a_pure_number_column(self):
-        # a column with only numbers has an integer dtype (numpy.int64), not python ints
-        path = self.write_excel([["Muster", "Max", 28353, 36526, 1, ""], ["Beispiel", "Eva", 29605, 36527, 1, ""]])
-        members = Members(path, self.config)
-        self.assertEqual([m.birthday for m in members.members], [pd.Timestamp("1977-08-16"), pd.Timestamp("1981-01-19")])
-
-    def test_numbers_in_text_columns_have_no_decimal_point(self):
-        path = self.write_excel([["Muster", "Max", "1967-06-01", "2020-03-01", 1, 1711234567.0]])
-        self.assertEqual(Members(path, self.config).members[0].mobile_phone, "1711234567")
-
-    def test_no_personal_data_on_console(self):
-        path = self.write_excel([["Geheimname", "Max", "1967-06-01", "2020-03-01", 1, ""]])
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            Members(path, self.config)
-        self.assertNotIn("Geheimname", output.getvalue())
+    def test_unreadable_and_empty(self):
+        self.assertTrue(pd.isna(parse_date("irgendwann")))
+        self.assertTrue(pd.isna(parse_date(None)))
+        self.assertEqual([to_text(value) for value in (None, 12345.0, " Max ", 7)], ["", "12345", "Max", "7"])
 
 
 class CalendarTest(unittest.TestCase):
@@ -382,59 +377,32 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(config.member_config, "Mitglied")
 
 
-class DataCheckTest(unittest.TestCase):
-    TODAY = pd.Timestamp("2026-11-14")
+class DataCheckTest(StandardBase):
 
-    def setUp(self):
-        self.config = Config()
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-
-    def issues(self, rows, columns=("Name", "Vorname", "Geburtstag", "Mitglied seit", "Mitglied", "Mobil")):
-        path = os.path.join(self.tmp.name, "members.xlsx")
-        pd.DataFrame(rows, columns=list(columns)).to_excel(path, index=False)
-        return Members(path, self.config, today=self.TODAY).issues
+    def issues(self, *people):
+        return self.write_rows([self.person(Nr=number, **values) for number, values in enumerate(people, start=1)]).issues
 
     def test_same_name_and_birthday_is_a_possible_duplicate(self):
-        found = self.issues([["Muster", "Max", "1967-06-01", "2000-01-01", 1, ""],
-                             ["Muster", "Max", "1967-06-01", "2001-01-01", 1, ""],
-                             ["Muster", "Max", "1995-03-03", "2015-01-01", 1, ""]])   # same name only: family
+        found = self.issues({}, {"Eintritt": datetime.date(2001, 1, 1)},
+                            {"Geburtstag": datetime.date(1995, 3, 3), "Eintritt": datetime.date(2015, 1, 1)})  # family
         self.assertEqual([(i.row, "Zeile 2" in i.message) for i in found], [(3, True)])
 
     def test_entry_before_birth_and_far_in_the_future(self):
-        found = self.issues([["Muster", "Max", "1967-06-01", "1960-01-01", 1, ""],
-                             ["Beispiel", "Eva", "1970-01-01", "2062-01-01", 1, ""]])
-        self.assertEqual([(i.row, i.message.split(" ")[0:3]) for i in found],
-                         [(2, ["Mitglied", "seit", "liegt"]), (3, ["Mitglied", "seit", "liegt"])])
-        self.assertIn("vor dem Geburtstag", found[0].message)
-        self.assertIn("Zukunft", found[1].message)
+        found = self.issues({"Eintritt": datetime.date(1960, 1, 1)},
+                            {"Vorname": "Eva", "Eintritt": datetime.date(2062, 1, 1)})
+        self.assertEqual([(i.row, i.message) for i in found],
+                         [(2, "Eintritt liegt vor dem Geburtstag."),
+                          (3, "Eintritt liegt mehr als ein Jahr in der Zukunft – Tippfehler beim Jahr?")])
 
     def test_implausible_age(self):
-        found = self.issues([["Alt", "Karl", "1850-01-01", "2000-01-01", 1, ""],
-                             ["Jung", "Eva", "2030-01-01", "2031-01-01", 1, ""],
-                             ["Normal", "Max", "1960-01-01", "2000-01-01", 1, ""]])
+        found = self.issues({"Name": "Alt", "Geburtstag": datetime.date(1850, 1, 1)},
+                            {"Name": "Jung", "Geburtstag": datetime.date(2030, 1, 1), "Eintritt": datetime.date(2031, 1, 1)},
+                            {"Name": "Normal", "Geburtstag": datetime.date(1960, 1, 1)})
         self.assertEqual(sorted({i.row for i in found}), [2, 3])
         self.assertTrue(any("Alter von 176" in i.message for i in found))
 
     def test_clean_list_has_no_findings(self):
-        self.assertEqual(self.issues([["Muster", "Max", "1967-06-01", "2000-01-01", 1, ""]]), [])
-
-    def test_unusual_headings_are_found_without_config(self):
-        path = os.path.join(self.tmp.name, "other.xlsx")
-        pd.DataFrame([["Muster", "Max", "1967-06-01", "2000-01-01", 1]],
-                     columns=["Nachname", "Vorname", "Geburtsdatum", "Eintritt", "Aktiv"]).to_excel(path, index=False)
-        members = Members(path, self.config)
-        self.assertEqual(members.members[0].birthday, pd.Timestamp("1967-06-01"))
-        self.assertEqual(members.members[0].member_since, pd.Timestamp("2000-01-01"))
-
-    def test_missing_column_error_lists_the_found_headings(self):
-        path = os.path.join(self.tmp.name, "wrong.xlsx")
-        pd.DataFrame([["Muster", "Max", 1]], columns=["Nachname", "Vorname", "Aktiv"]).to_excel(path, index=False)
-        with self.assertRaises(MemberListError) as error:
-            Members(path, self.config)
-        message = str(error.exception)
-        self.assertIn("Geburtstag, Mitglied seit", message)
-        self.assertIn("Nachname, Vorname, Aktiv", message)
+        self.assertEqual(self.issues({}), [])
 
 
 class StatisticsTest(unittest.TestCase):
@@ -517,7 +485,7 @@ class TemplateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "template.xlsx")
             write_member_template(path, config)
-            members = Members(path, config)                         # no members, no problems, all columns found
+            members = Members(path)                         # no members, no problems, all columns found
             book = load_workbook(path)
         sheet = book["Mitglieder"]
         self.assertTrue(members.standard)
@@ -547,37 +515,7 @@ class TemplateTest(unittest.TestCase):
         self.assertNotEqual(ids[0], ids[1])
 
 
-class StandardFileTest(unittest.TestCase):
-    TODAY = pd.Timestamp("2026-11-14")
-    HEADINGS = [column.heading for column in schema.MEMBER_COLUMNS]
-
-    def setUp(self):
-        self.config = Config()
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.path = os.path.join(self.tmp.name, "Mitglieder.xlsx")
-        write_member_template(self.path, self.config)
-
-    # rows are {heading: value}; they are written below the heading of the template (like somebody typing in excel)
-    def write_rows(self, rows, headings=None):
-        from openpyxl import load_workbook
-        book = load_workbook(self.path)
-        sheet = book["Mitglieder"]
-        if headings is not None:
-            for index, heading in enumerate(headings, start=1):
-                sheet.cell(row=1, column=index, value=heading)
-        position = {sheet.cell(row=1, column=index).value: index for index in range(1, sheet.max_column + 1)}
-        for number, values in enumerate(rows, start=2):
-            for heading, value in values.items():
-                sheet.cell(row=number, column=position[heading], value=value)
-        book.save(self.path)
-        return Members(self.path, self.config, today=self.TODAY)
-
-    def person(self, **values):
-        row = {"Nr": 1, "Name": "Muster", "Vorname": "Max", "Geschlecht": "männlich",
-               "Geburtstag": datetime.date(1967, 6, 1), "Eintritt": datetime.date(2002, 5, 5), "Status": "aktiv"}
-        row.update(values)
-        return row
+class StandardFileTest(StandardBase):
 
     def test_all_fields_are_read(self):
         members = self.write_rows([self.person(**{"PLZ": "01234", "E-Mail": "max@example.org", "Abteilung": "Tennis",
@@ -635,6 +573,7 @@ class StandardFileTest(unittest.TestCase):
         with self.assertRaises(MemberListError) as error:
             self.write_rows([], headings=headings)
         self.assertIn("nicht gefunden: Geschlecht", str(error.exception))
+        self.assertIn("Gefundene Überschriften in Zeile 1: Nr, Name, Vorname, Gender", str(error.exception))
 
     def test_without_info_sheet_the_headings_identify_the_file(self):
         from openpyxl import load_workbook
@@ -644,14 +583,6 @@ class StandardFileTest(unittest.TestCase):
         members = self.write_rows([self.person()])
         self.assertTrue(members.standard)
         self.assertEqual(len(members.members), 1)
-
-    def test_old_list_is_not_taken_for_a_standard_file(self):
-        path = os.path.join(self.tmp.name, "alt.xlsx")
-        pd.DataFrame([["Muster", "Max", "1967-06-01", "2000-01-01", 1]],
-                     columns=["Name", "Vorname", "Geburtstag", "Mitglied seit", "Status"]).to_excel(path, index=False)
-        members = Members(path, self.config)
-        self.assertFalse(members.standard)
-        self.assertEqual(members.members[0].status, schema.ACTIVE)
 
     def test_file_is_closed_after_reading(self):
         self.write_rows([self.person()])

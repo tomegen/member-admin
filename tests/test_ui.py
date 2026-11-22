@@ -165,24 +165,17 @@ class UiTest(unittest.TestCase):
         self.assertEqual(table.rowCount(), 0)
         self.assertIn("nichts an", self.window.overview.upcoming_label.text())
 
-    def test_settings_change_the_choices_and_are_remembered(self):
-        self.window.load_file(self.sample())
-        self.window.year_spin.setValue(2027)
-        page = self.window.birthdays
-        page.checkboxes[page.spec.numbers.index(75)].setChecked(False)
-        self.window.set_numbers([60, 75, 80], [25])
-        self.assertEqual([box.text() for box in page.checkboxes], ["60. Geburtstag", "75. Geburtstag", "80. Geburtstag"])
-        self.assertFalse(page.checkboxes[1].isChecked())                       # unchecked stays unchecked
-        self.assertEqual(page.table.rowCount(), 1)
-        self.assertEqual(len(self.window.honors.checkboxes), 1)
-        self.assertEqual(QSettings().value("birthday_numbers"), "60, 75, 80")
-        # a new window (= next start of the app) uses the saved numbers
-        again = MainWindow(Config())
-        self.addCleanup(again.close)
-        self.assertEqual(again.config.birthday_config, [60, 75, 80])
-        # the defaults are not stored
-        self.window.set_numbers(self.window.default_birthdays, self.window.default_honors)
-        self.assertIsNone(QSettings().value("birthday_numbers"))
+    def test_numbers_chosen_in_version_0_1_go_into_new_files(self):
+        from unittest import mock
+        QSettings().setValue("birthday_numbers", "60, 75, 80")
+        window = MainWindow(Config())
+        self.addCleanup(window.close)
+        path = os.path.join(self.tmp.name, "neu.xlsx")
+        with mock.patch("ui.main_window.save_file", side_effect=lambda parent, name, flt, write: write(path)):
+            window.welcome.template_requested.emit()
+        window.load_file(path)
+        self.assertEqual(window.birthdays.spec.numbers, [60, 75, 80])
+        self.assertEqual(window.honors.spec.numbers, window.default_honors)
 
     def test_minimal_option_and_reminder_are_used_for_the_files(self):
         self.window.load_file(self.sample())
@@ -196,7 +189,6 @@ class UiTest(unittest.TestCase):
         self.assertEqual(list(pd.read_excel(xlsx).columns), ["Anlass", "Datum", "Vorname", "Name"])
         with open(ics, "rb") as file:
             self.assertIn(b"TRIGGER:-P13DT15H", file.read().replace(b"\r\n", b""))
-        self.assertEqual(QSettings().value("reminder_days"), 14)
 
     def test_statistics_tab_follows_the_year(self):
         self.window.load_file(self.sample())
