@@ -40,7 +40,7 @@ Import, desto mehr Vereine steigen um, deshalb hat er hohe Priorität.
 ## 1. Dateiformat (Schema-Version 1)
 
 Grundsätze für Leute, die die Datei von Hand pflegen: Überschriften fett in Zeile 1, Pflichtspalten blau, Dropdowns
-und Datumsprüfung bis Zeile 5001, fixierte Kopfzeile und Namensspalten, **keine Formeln** in Daten, die die App liest,
+und Datumsprüfung bis Zeile 1001 (die Selbstreparatur erweitert bei Bedarf), fixierte Kopfzeile und Namensspalten, **keine Formeln** in Daten, die die App liest,
 kein Blattschutz (Google Tabellen und Excel mobil gehen damit unterschiedlich um), keine Excel-„Tabellen“-Objekte
 (gehen beim Speichern aus Google Tabellen verloren).
 
@@ -61,7 +61,8 @@ kein Blattschutz (Google Tabellen und Excel mobil gehen damit unterschiedlich um
 
 Fixiert bis Spalte D (Nr, Name, Vorname bleiben beim Wischen am Handy sichtbar). Die App liest und schreibt
 **über die Überschrift**, nicht über die Position: Spalten umsortieren geht, zusätzliche eigene Spalten des Vereins
-bleiben unangetastet erhalten, umbenannte Pflichtspalten erscheinen in der Datenprüfung.
+bleiben unangetastet erhalten. Fehlt eine Pflichtspalte (z. B. umbenannt), meldet die App das beim Öffnen mit den
+gefundenen Überschriften (wie heute).
 
 ### Blatt „Funktionen“
 
@@ -259,6 +260,15 @@ zusätzlich Import, Anlegen, Bearbeiten, Konflikt).
 | 8 | Datenprüfung erweitern, Smoke-Test, Beispieldateien, Prüfung von Hand, Doku, Release 0.2.0 | M |
 
 Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify update .` wird ausgeführt.
+
+### Stand der Umsetzung
+
+- **AP 1 erledigt (2026-11-19, Branch `feature/standard-format`):** `model/schema.py`, `model/club_file.py`,
+  `model/values.py`, neue leere Standarddatei (`logic/template.py`), `Member` mit `status`/`is_member` und den neuen
+  Feldern, Prüfungen der Standarddatei (Nr fehlt/doppelt, Geschlecht, Status, Austritt). **Übergang:** Alte Listen
+  liest `Members` weiter wie bisher (`read_old_list`, „Mitglied“ 1/0 → aktiv/ausgetreten), bis AP 5 sie an den
+  Import-Assistenten übergibt. `example_file.xlsx` ist noch im alten Format (AP 8). Offen für AP 3: Datenprüfung
+  zeigt „aktiv“ auch für passive Mitglieder, Statistik-Zeile heißt noch „Aktive Mitglieder“.
 
 ## 9. Doku nach Umsetzung
 

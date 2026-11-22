@@ -44,7 +44,7 @@ def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filenam
 
 # function to calculate if a member has birthday in the selected timeframe
 def is_birthday(member, birthday, from_date, to_date):
-    if member.member == 0 or pd.isna(member.birthday):
+    if not member.is_member or pd.isna(member.birthday):
         return False
     from_date = shift_years(from_date, -birthday)
     to_date = shift_years(to_date, -birthday)

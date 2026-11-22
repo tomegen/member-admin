@@ -1,6 +1,6 @@
 {
   "0": "with",
-  "1": "pandas",
+  "1": "club_file.py",
   "2": "birthday_calculation.py",
   "3": "main_window.py",
   "4": "build.py",
@@ -11,12 +11,16 @@
   "9": ".claude/CLAUDE.md",
   "10": "Members",
   "11": "ResultPage",
-  "12": "Config",
+  "12": "StatisticsPage",
   "13": "Exception",
   "14": "release",
   "15": "steps",
   "16": "version",
-  "17": "IssuesPage",
+  "17": "mitgliederverwaltung.py",
   "18": "build",
-  "19": "strategy"
+  "19": "strategy",
+  "20": "Member",
+  "21": "template.py",
+  "22": "StandardFileTest",
+  "23": "QWidget"
 }

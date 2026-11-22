@@ -18,7 +18,7 @@ def age_group_label(low, high):
 class Statistics:
 
     def __init__(self, members, year, stichtag, groups=AGE_GROUPS):
-        active = [member for member in members if member.member == 1]
+        active = [member for member in members if member.is_member]
         self.year = year
         self.stichtag = stichtag
         self.active = len(active)

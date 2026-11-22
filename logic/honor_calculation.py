@@ -45,7 +45,7 @@ def write_honors_into_txt(members, honors, from_date, to_date, txt_filename, min
 
 # Calculate if a member will get an honor
 def is_honor(member, honor, from_date, to_date):
-    if member.member == 0 or pd.isna(member.member_since):
+    if not member.is_member or pd.isna(member.member_since):
         return False
     from_date = shift_years(from_date, -honor)
     to_date = shift_years(to_date, -honor)

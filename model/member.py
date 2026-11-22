@@ -2,6 +2,8 @@ import os
 
 import pandas as pd
 
+from model.schema import ACTIVE, PASSIVE
+
 
 def format_date(date):
     return "unbekannt" if pd.isna(date) else str(date.strftime('%d.%m.%Y'))
@@ -9,8 +11,10 @@ def format_date(date):
 
 class Member:
 
-    def __init__(self, last_name, first_name, street, plz, ort, birthday, phone_number, mobile_phone, member_since,
-                 iban, reference, member):
+    # status is aktiv, passiv, ausgetreten or "" (unknown, not counted); nr is None while it is not assigned
+    def __init__(self, last_name, first_name, street="", plz="", ort="", birthday=pd.NaT, phone_number="",
+                 mobile_phone="", member_since=pd.NaT, iban="", reference="", status=ACTIVE, nr=None, gender="",
+                 exit_date=pd.NaT, exit_reason="", department="", fee_class="", email="", note=""):
         self.last_name = last_name
         self.first_name = first_name
         self.street = street
@@ -22,7 +26,20 @@ class Member:
         self.member_since = member_since
         self.iban = iban
         self.reference = reference
-        self.member = member
+        self.status = status
+        self.nr = nr
+        self.gender = gender
+        self.exit_date = exit_date
+        self.exit_reason = exit_reason
+        self.department = department
+        self.fee_class = fee_class
+        self.email = email
+        self.note = note
+
+    # active and passive members count, former members and an unknown status do not
+    @property
+    def is_member(self):
+        return self.status in (ACTIVE, PASSIVE)
 
     def full_name(self):
         return (self.first_name + " " + self.last_name).strip()

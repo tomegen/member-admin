@@ -29,6 +29,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `config/config.py` | `Config`, `ConfigError`, `parse_numbers`; `config.ini` neben EXE/`.app`, sonst eingebaute Vorlage, sonst Projektordner, sonst `DEFAULTS` (Datei ist optional) |
 | `config.ini` | Standardwerte: Auswahllisten (Geburtstage/Ehrungen) + bevorzugte Excel-Spaltennamen |
 | `model/members.py` | Excel → `Member`-Liste, `Issue`-Liste (Datenprüfung), `parse_date`, `MemberListError`, Zähler |
+| `model/schema.py`, `model/club_file.py`, `model/values.py` | **Standardformat** (Blätter, Spalten, Dropdown-Werte, Schema-Version), Lesen der Standarddatei mit openpyxl (echte Excel-Zeilen, `is_standard_file`), `parse_date`/`to_text`. Plan: `PLAN_DATA_STORAGE.md` |
 | `model/columns.py`, `model/checks.py`, `model/issue.py` | Spaltenerkennung (`FIELDS`, `detect_columns`), Plausibilitätsprüfungen (`age_on`), `Issue` |
 | `model/member.py`, `model/entry.py` | Datenklassen (`Member`, `Entry` = Treffer mit Zahl, Mitglied, Datum) |
 | `logic/date_utils.py` | `shift_years` (29.02. → 28.02. in Nicht-Schaltjahren) |

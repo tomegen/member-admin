@@ -1,62 +1,73 @@
-import numbers
-
 import pandas as pd
+from model import club_file
 from model.checks import plausibility_issues
 from model.columns import detect_columns, missing_mandatory
 from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
+from model.schema import ACTIVE, LEFT
+from model.values import parse_date, to_text  # noqa: F401 (also imported from here)
+
+READ_ERROR = ("Die Datei konnte nicht gelesen werden.\n\nIst es eine Excel-Datei (.xlsx oder .xls) "
+              "und ist sie vielleicht noch in einem anderen Programm geöffnet?\n\nTechnische Details: ")
 
 
 class MemberListError(Exception):
     pass
 
 
-# excel cells formatted as number hold a serial day number (not nanoseconds)
-def parse_date(value):
-    if pd.isna(value):
-        return pd.NaT
-    if isinstance(value, numbers.Real):  # also numpy numbers
-        return pd.to_datetime(value, unit="D", origin="1899-12-30")
-    # iso text (1967-06-01) is read as it is, german text (01.06.1967) is read day first
-    parsed = pd.to_datetime(value, format="ISO8601", errors="coerce")
-    if pd.isna(parsed):
-        parsed = pd.to_datetime(value, dayfirst=True, errors="coerce")
-    return parsed
-
-
-# cell content as text: empty cells become "", numbers like 12345.0 become "12345"
-def to_text(value):
-    if pd.isna(value):
-        return ""
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    return str(value).strip()
+def missing_columns_error(missing, found):
+    return MemberListError("In der Excel-Datei wurden diese Spalten nicht gefunden: " + ", ".join(missing) +
+                           ".\n\nGefundene Überschriften in Zeile 1: " +
+                           ", ".join(str(heading) for heading in found) +
+                           "\n\nBitte benennen Sie die Überschrift in Excel entsprechend um, z. B. in „" +
+                           missing[0] + "“.")
 
 
 class Members:
 
+    # a file in the standard format (model/schema.py) is read with all fields; an old list with the
+    # columns found by their heading (until the import assistant converts it)
     def __init__(self, filename, config, today=None):
 
         today = pd.Timestamp.now().normalize() if today is None else pd.Timestamp(today)
         self.members = []
         self.issues = []
         self.filename = filename
+        self.standard = club_file.is_standard_file(filename)
+        if self.standard:
+            rows = self.read_standard(today)
+            self.issues += plausibility_issues(rows, today, since_label="Eintritt")
+        else:
+            rows = self.read_old_list(config)
+            self.issues += plausibility_issues(rows, today)
+        self.members = [member for _, member in rows]
+
+    def read_standard(self, today):
         try:
-            self.sheet = pd.read_excel(filename, sheet_name=0)
+            book = club_file.open_book(self.filename)
         except Exception as e:
-            raise MemberListError("Die Datei konnte nicht gelesen werden.\n\nIst es eine Excel-Datei (.xlsx oder .xls) "
-                                  "und ist sie vielleicht noch in einem anderen Programm geöffnet?\n\n"
-                                  "Technische Details: " + str(e))
+            raise MemberListError(READ_ERROR + str(e))
+        try:
+            rows, issues = club_file.read_members(book, today)
+        except club_file.MissingColumns as e:
+            raise missing_columns_error(e.missing, e.found)
+        finally:
+            book.close()
+        self.issues += issues
+        return rows
+
+    # an old list: first sheet, heading in row 1, "Mitglied" is 1 or 0
+    def read_old_list(self, config):
+        try:
+            self.sheet = pd.read_excel(self.filename, sheet_name=0)
+        except Exception as e:
+            raise MemberListError(READ_ERROR + str(e))
 
         # the columns are recognized by their heading (usual spellings, or the name from config.ini)
         columns = detect_columns(list(self.sheet.columns), config)
         missing_columns = missing_mandatory(columns)
         if missing_columns:
-            raise MemberListError("In der Excel-Datei wurden diese Spalten nicht gefunden: " +
-                                  ", ".join(missing_columns) + ".\n\nGefundene Überschriften in Zeile 1: " +
-                                  ", ".join(str(heading) for heading in self.sheet.columns) +
-                                  "\n\nBitte benennen Sie die Überschrift in Excel entsprechend um, z. B. in „" +
-                                  missing_columns[0] + "“.")
+            raise missing_columns_error(missing_columns, list(self.sheet.columns))
 
         last_names = self.sheet[columns["last_name"]]
         first_names = self.sheet[columns["first_name"]]
@@ -91,8 +102,6 @@ class Members:
             if member not in (0, 1):
                 self.issues.append(Issue(row, name, False, "Mitglied-Status fehlt oder ist nicht 0/1, das Mitglied "
                                                            "wird nicht mitgezählt."))
-                member = 0
-            member = int(member)
             active = member == 1
 
             if not last_name or not first_name:
@@ -119,11 +128,9 @@ class Members:
                            member_since=member_since,
                            iban=to_text(ibans[i]),
                            reference=to_text(references[i]),
-                           member=member)
-            self.members.append(entry)
+                           status=ACTIVE if active else LEFT if member == 0 else "")
             rows.append((row, entry))
-
-        self.issues += plausibility_issues(rows, today)
+        return rows
 
     # an optional column that is not in the excel file is treated as empty
     def optional_column(self, name):
@@ -133,15 +140,15 @@ class Members:
 
     # Calculate the total members
     def calculate_members(self):
-        return sum(member.member for member in self.members)
+        return sum(1 for member in self.members if member.is_member)
 
     # Calculate the former members / entries that are not counted
     def calculate_inactive(self):
-        return sum(1 for member in self.members if member.member == 0)
+        return sum(1 for member in self.members if not member.is_member)
 
     # Calculate the new members in the given year (default: current year)
     def calculate_new_members(self, year=None):
         if year is None:
             year = pd.Timestamp.now().year
-        return sum(member.member for member in self.members
-                   if not pd.isna(member.member_since) and member.member_since.year == year)
+        return sum(1 for member in self.members
+                   if member.is_member and not pd.isna(member.member_since) and member.member_since.year == year)

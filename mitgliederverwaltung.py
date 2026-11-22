@@ -10,11 +10,13 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from config.config import Config, ConfigError
 from logic.statistics import write_statistics_into_xlsx
 from logic.template import write_member_template
+from model.members import Members
 from ui.main_window import MainWindow
 from ui.theme import apply_theme
 
 
-# used by the build: load the file and write every export once, to find missing modules in the packaged app
+# used by the build: load the file, write every export and read a new standard file once,
+# to find missing modules in the packaged app
 def smoke_test(window, path):
     window.show_error = lambda title, text: print(title + ": " + text, file=sys.stderr)  # no dialog that blocks
     if not window.load_file(path):
@@ -30,7 +32,7 @@ def smoke_test(window, path):
         write_statistics_into_xlsx(window.statistics_page.statistics, target)
         template = os.path.join(folder, "Vorlage.xlsx")
         write_member_template(template, window.config)
-        if os.path.getsize(target) == 0 or os.path.getsize(template) == 0:
+        if os.path.getsize(target) == 0 or not Members(template, window.config).standard:
             return False
     return True
 

@@ -35,9 +35,9 @@ class OverviewPage(QWidget):
 
         grid = QGridLayout()
         grid.setSpacing(16)
-        self.active_card = make_card("Aktive Mitglieder")
+        self.active_card = make_card("Mitglieder")
         self.new_card = make_card("Neue Mitglieder")
-        self.inactive_card = make_card("Nicht gezählt (Mitglied = 0)")
+        self.inactive_card = make_card("Nicht gezählt")
         self.issues_card = make_card("Hinweise zur Mitgliederliste")
         grid.addWidget(self.active_card[0], 0, 0)
         grid.addWidget(self.new_card[0], 0, 1)
@@ -73,7 +73,9 @@ class OverviewPage(QWidget):
         self.new_card[1].setText(str(members.calculate_new_members(year)))
         self.new_card[2].setText("mit Eintritt im Jahr " + str(year))
         self.inactive_card[1].setText(str(members.calculate_inactive()))
-        self.inactive_card[2].setText("zählen nicht für Geburtstage und Ehrungen")
+        self.active_card[2].setText("aktiv und passiv" if members.standard else "mit Mitglied = 1")
+        self.inactive_card[2].setText(("ausgetreten oder ohne gültigen Status" if members.standard else
+                                       "Mitglied = 0 oder leer") + " – zählen nicht für Geburtstage und Ehrungen")
         self.issues_card[1].setText(str(len(members.issues)))
         if active_issues:
             self.issues_card[2].setText(str(active_issues) + " davon bei aktiven Mitgliedern – siehe Tab „Datenprüfung“")
