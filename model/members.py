@@ -6,6 +6,7 @@ from model.functions import read_functions
 from model.columns import detect_columns, missing_mandatory
 from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
+from model import schema
 from model.schema import ACTIVE, LEFT, PASSIVE
 from model.values import parse_date, to_text  # noqa: F401 (also imported from here)
 
@@ -38,6 +39,7 @@ class Members:
         self.snapshot = None   # only for the standard file, which the app can change
         self.settings = ClubSettings()   # an old list has no settings sheet: defaults
         self.functions = []              # rows of the sheet "Funktionen" (model.functions.Function)
+        self.file_id = None              # from the sheet "Info": the same in copies and conflict copies
         try:
             data = club_file.read_bytes(filename)
         except OSError as e:
@@ -64,6 +66,7 @@ class Members:
         self.functions, function_issues = read_functions(book, [(member.nr, member.full_name()) for _, member in rows])
         self.issues += issues + setting_issues + function_issues
         self.snapshot = club_file.Snapshot(club_file.file_hash(data), keys)
+        self.file_id = to_text(club_file.read_info(book).get(schema.FILE_ID_KEY)) or None
         return rows
 
     def functions_of(self, nr):

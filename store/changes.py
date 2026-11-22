@@ -54,7 +54,7 @@ def update_member(nr, base, values, action="geändert"):
 
 # a new member gets the next free nr and the row below the last member; same name and birthday as somebody in the
 # file raises Duplicate, unless allow_duplicate. functions: [(function, from, to, note)] of the new member
-def add_member(values, allow_duplicate=False, functions=()):
+def add_member(values, allow_duplicate=False, functions=(), action="angelegt"):
     def change(book, members):
         same = (key_of("last_name", values.get("last_name")).casefold(),
                 key_of("first_name", values.get("first_name")).casefold(),
@@ -73,8 +73,25 @@ def add_member(values, allow_duplicate=False, functions=()):
                 members.set(row, field, value)
         if functions:
             FunctionSheet(book).append(nr, members.name(row), functions)
-        return [LogEntry(nr, members.name(row), "angelegt", "", "", "")]
+        return [LogEntry(nr, members.name(row), action, "", "", "")]
     return change
+
+
+# saves the result of a comparison (logic.merge): new people are added, the chosen fields of the others are changed
+# (base_rows: Members.snapshot.rows when the file was read); leave: nr of members that are marked as left
+def merge_members(items, base_rows, leave=(), exit_date=None, action="Import"):
+    parts = []
+    for item in items:
+        if item.member is not None and item.chosen:
+            values = {d.field: item.values[d.field] for d in item.differences if d.field in item.chosen}
+            parts.append(update_member(item.nr, base_rows[item.nr], values, action=action))
+        elif item.member is None and item.take:
+            values = {field: value for field, value in item.values.items() if field != "nr"}
+            parts.append(add_member(values, allow_duplicate=True, action=action))
+    for nr in leave:
+        parts.append(update_member(nr, base_rows[nr], {"status": schema.LEFT, "exit_date": exit_date},
+                                   action="Austritt"))
+    return combine(*parts)
 
 
 # several changes in one save, e.g. the data of a member and its functions

@@ -17,6 +17,7 @@ from model.club_file import file_hash, is_standard_file, read_bytes
 from model.members import MemberListError, Members
 from model.schema import BIRTHDAY, HONOR
 from store.changes import update_settings
+from store.conflict_copies import conflict_copies
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import save
 from ui.club_settings_dialog import ClubSettingsDialog
@@ -120,6 +121,9 @@ class MainWindow(QMainWindow):
         self.members_page.edit_requested.connect(self.actions.edit_member)
         self.members_page.exit_requested.connect(self.actions.record_exit)
         self.members_page.numbers_requested.connect(self.actions.assign_numbers)
+        self.members_page.merge_requested.connect(lambda: self.actions.merge_list())
+        self.members_page.copies_requested.connect(lambda: self.actions.check_conflict_copies())
+        self.asked_copies = set()   # conflict copies are offered once per start of the app
         self.birthdays = ResultPage(ResultSpec(
             title="Geburtstage",
             description="Runde Geburtstage im gewählten Zeitraum. Welche Geburtstage zur Auswahl stehen, "
@@ -240,7 +244,23 @@ class MainWindow(QMainWindow):
         self.refresh_overview()
         self.update_issue_tab()
         self.stack.setCurrentWidget(self.view)
+        if self.update_conflict_copies() - self.asked_copies:
+            QTimer.singleShot(0, self.offer_conflict_copies)   # after loading, not inside a running save
         return True
+
+    # conflict copies of the open file (store.conflict_copies); shown on the members tab
+    def update_conflict_copies(self):
+        copies = set(conflict_copies(self.filename, self.members.file_id)) if self.members.standard else set()
+        self.members_page.set_conflict_copies(len(copies))
+        return copies
+
+    def offer_conflict_copies(self):
+        if QApplication.activeModalWidget() is not None:
+            return
+        copies = self.update_conflict_copies()
+        if copies - self.asked_copies:
+            self.asked_copies |= copies
+            self.actions.check_conflict_copies(ask=True)
 
     def update_issue_tab(self):
         active_issues = sum(1 for issue in self.members.issues if issue.active)

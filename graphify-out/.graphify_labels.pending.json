@@ -24,5 +24,13 @@
   "22": "MemberEditingUiTest",
   "23": "ResultPage",
   "24": "Ideen für das Mitglieder Management Portal",
-  "25": "QWidget"
+  "25": "QWidget",
+  "26": "test_ui.py",
+  "27": "import_wizard.py",
+  "28": "suggest_columns",
+  "29": "CheckPage",
+  "30": "read_source",
+  "31": "Table",
+  "32": "Exception",
+  "33": "QWidget"
 }

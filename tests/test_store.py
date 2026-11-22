@@ -17,7 +17,10 @@ from model.club_file import read_bytes
 from model.members import Members
 from store import backups
 from model.club_settings import ClubSettings, Occasion
-from store.changes import add_member, assign_numbers, combine, update_functions, update_member, update_settings
+from logic.merge import CHANGED, NEW, SAME, SIMILAR, compare, member_values
+from store.changes import (add_member, assign_numbers, combine, merge_members, update_functions, update_member,
+                           update_settings)
+from store.conflict_copies import conflict_copies, move_to_backups
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import lock_owner, save
 
@@ -448,6 +451,86 @@ class FunctionsTest(StoreTest):
         self.assertEqual([(f.nr, f.name, f.function, f.note) for f in self.read().functions_of(3)],
                          [(3, "Nina Neu", "Jugendwart", "ab sofort")])
         self.assertEqual(self.read().issues, [])
+
+
+class MergeTest(StoreTest):
+
+    @staticmethod
+    def incoming(*rows):
+        return [(values, set(values)) for values in rows]
+
+    def test_people_are_matched_and_compared(self):
+        members = self.read().members
+        items, only = compare(self.incoming(
+            {"last_name": "Muster", "first_name": "Max", "birthday": datetime.date(1967, 6, 1), "ort": "Neustadt",
+             "plz": ""},                                                     # empty never empties
+            {"last_name": "beispiel", "first_name": "EVA", "email": "eva@example.org"},        # name only
+            {"last_name": "Muster", "first_name": "Max", "birthday": datetime.date(1990, 1, 1)},  # same name only
+            {"last_name": "Neu", "first_name": "Nina", "birthday": datetime.date(2001, 3, 4)}), members)
+        self.assertEqual([item.kind for item in items], [CHANGED, CHANGED, SIMILAR, NEW])
+        self.assertEqual([(d.heading, d.current, d.incoming) for d in items[0].differences], [("Ort", "", "Neustadt")])
+        self.assertEqual(items[1].nr, 2)
+        self.assertIn("nur über den Namen", items[1].note)
+        self.assertIn("Nr 1", items[2].note)
+        self.assertEqual(([item.take for item in items], only), ([False, False, False, True], []))
+
+    def test_number_counts_only_with_the_same_name(self):
+        members = self.read().members
+        items, only = compare(self.incoming({"nr": 1, "last_name": "Muster", "first_name": "Max"},
+                                            {"nr": 2, "last_name": "Andere", "first_name": "Person"}),
+                              members, by_number=True)
+        self.assertEqual([(item.kind, item.nr) for item in items], [(SAME, 1), (NEW, None)])
+        self.assertEqual([member.first_name for member in only], ["Eva"])
+
+    def test_chosen_changes_new_people_and_leavers_are_saved_at_once(self):
+        members = self.read()
+        items, only = compare(self.incoming(
+            {"last_name": "Muster", "first_name": "Max", "ort": "Neustadt", "phone": "0123"},
+            {"last_name": "Neu", "first_name": "Nina", "gender": "weiblich", "birthday": datetime.date(2001, 3, 4),
+             "member_since": datetime.date(2026, 11, 1), "status": "aktiv"}), members.members)
+        self.assertEqual(items[0].chosen, {"ort", "phone"})                   # empty in the file: taken by default
+        items[0].chosen.discard("phone")
+        saved = save(self.path, merge_members(items, members.snapshot.rows, leave=[2],
+                                              exit_date=datetime.date(2026, 12, 31)), "A", now=NOW)
+        self.assertEqual([(e.nr, e.action, e.field) for e in saved.entries],
+                         [(1, "Import", "Ort"), (3, "Import", ""), (2, "Austritt", "Status"), (2, "Austritt", "Austritt am")])
+        after = self.read()
+        self.assertEqual((self.member(1).ort, self.member(1).phone_number), ("Neustadt", ""))
+        self.assertEqual((self.member(3).first_name, self.member(2).status), ("Nina", "ausgetreten"))
+        self.assertEqual(len(os.listdir(backups.backup_folder(self.path))), 1)
+        self.assertEqual(after.issues, [])
+
+
+class ConflictCopyTest(StoreTest):
+
+    def copy_as(self, name):
+        target = os.path.join(self.tmp.name, name)
+        with open(target, "wb") as file:
+            file.write(read_bytes(self.path))
+        return target
+
+    def test_copies_with_the_same_file_id_are_found(self):
+        copy = self.copy_as("Mitglieder (Konfliktkopie von Eva 2026-11-22).xlsx")
+        self.copy_as("~$Mitglieder.xlsx")
+        other = os.path.join(self.tmp.name, "Mitglieder (2).xlsx")
+        write_member_template(other, self.config)                            # another file with another id
+        members = self.read()
+        self.assertTrue(members.file_id)
+        self.assertEqual(conflict_copies(self.path, members.file_id), [copy])
+        moved = move_to_backups(copy, NOW)
+        self.assertEqual(os.path.basename(moved), "Mitglieder (Konfliktkopie von Eva 2026-11-22) 2026-11-22 140212.xlsx")
+        self.assertEqual(conflict_copies(self.path, members.file_id), [])
+
+    def test_changes_in_a_copy_are_compared_by_number(self):
+        copy = self.copy_as("Mitglieder-LAPTOP.xlsx")
+        book = load_workbook(copy)
+        book["Mitglieder"]["N2"] = "Kopiestadt"
+        book.save(copy)
+        current, other = self.read(), Members(copy, self.config)
+        incoming = [(dict(member_values(m), nr=m.nr), set(member_values(m))) for m in other.members]
+        items, only = compare(incoming, current.members, by_number=True)
+        self.assertEqual([(item.kind, [d.incoming for d in item.differences]) for item in items],
+                         [(CHANGED, ["Kopiestadt"]), (SAME, [])])
 
 
 class BackupTest(unittest.TestCase):

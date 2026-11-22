@@ -303,6 +303,14 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   `Members.read_old_list`, alter `SettingsDialog` und QSettings-Zahlen sind nur noch Übergang/Migration →
   aufräumen; README zum neuen Format.
 
+- **AP 6 erledigt (2026-11-22):** `logic/merge.py` (`FileIndex`, `compare`, `MergeItem`), `store.changes.merge_members`,
+  `store/conflict_copies.py`, `ui/merge_dialog.py`, Abgleich-Modus des Assistenten, `MemberActions.merge_list` /
+  `check_conflict_copies`. Abweichungen: Zuordnung per Nr nur, wenn auch der Name passt (fremde Nummernkreise);
+  ohne Geburtstag in der Liste über einen eindeutigen Namen (für reine E-Mail-/Adresslisten). Konfliktkopien werden
+  nur über Dateinamen-Anfang **und** Datei-ID erkannt (keine Namensmuster der Dienste nötig); Funktionen und
+  Einstellungen der Kopie werden nicht abgeglichen. Vor einem Abgleich brauchen alle Mitglieder eine Nr. Verschobene
+  Konfliktkopien fallen nicht unter die Rotation der Sicherungen.
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

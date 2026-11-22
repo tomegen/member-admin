@@ -37,6 +37,8 @@ class MembersPage(QWidget):
     edit_requested = Signal(object)
     exit_requested = Signal(object)
     numbers_requested = Signal()
+    merge_requested = Signal()
+    copies_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -90,7 +92,15 @@ class MembersPage(QWidget):
         self.numbers_button.setToolTip("Mitglieder, die in Excel ohne Nr eingetragen wurden, bekommen die nächsten "
                                        "freien Nummern.")
         self.numbers_button.clicked.connect(self.numbers_requested.emit)
-        for button in (self.new_button, self.edit_button, self.exit_button, self.numbers_button):
+        self.merge_button = secondary_button("Liste abgleichen …")
+        self.merge_button.setToolTip("Eine andere Liste (z. B. neue E-Mail-Adressen oder den Export des Verbands) mit "
+                                     "dieser Mitgliederliste vergleichen und Änderungen übernehmen.")
+        self.merge_button.clicked.connect(self.merge_requested.emit)
+        self.copies_button = secondary_button("Konfliktkopie prüfen")
+        self.copies_button.clicked.connect(self.copies_requested.emit)
+        self.copies_button.hide()
+        for button in (self.new_button, self.edit_button, self.exit_button, self.numbers_button, self.merge_button,
+                       self.copies_button):
             buttons.addWidget(button)
         buttons.addStretch()
         layout.addLayout(buttons)
@@ -112,8 +122,13 @@ class MembersPage(QWidget):
                                 "Diese Liste ist noch nicht im Standardformat der App, deshalb kann sie hier nur "
                                 "angezeigt werden. Bearbeiten Sie sie in Excel.")
         self.new_button.setEnabled(editable)
+        self.merge_button.setEnabled(editable)
         self.numbers_button.setVisible(editable and any(m.nr is None for m in members.members))
         self.refresh()
+
+    def set_conflict_copies(self, count):
+        self.copies_button.setText("Konfliktkopie prüfen (" + str(count) + ")")
+        self.copies_button.setVisible(count > 0)
 
     def shown_members(self):
         if self.members is None:

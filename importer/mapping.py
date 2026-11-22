@@ -254,6 +254,21 @@ def text_of(cells, targets, field):
     return to_text(cells[targets.index(field)]) if field in targets else ""
 
 
+# the fields the list really has (a value that the app filled in or estimated is not one of them)
+def given_fields(targets):
+    found = set()
+    for target in targets:
+        if target == NAME_BOTH:
+            found |= {"last_name", "first_name"}
+        elif target == PLZ_ORT:
+            found |= {"plz", "ort"}
+        elif target == NOTE:
+            found.add("note")
+        elif target:
+            found.add(target)
+    return found
+
+
 # the rows that are taken over get their numbers: a valid nr of the old list stays if it is unique, all others
 # get the next free numbers
 def assign_numbers(rows):

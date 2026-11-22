@@ -12,6 +12,7 @@ from importer.mapping import (COLUMNS, NAME_BOTH, TARGETS, Table, convert, disti
                               suggest_columns, suggest_value)
 from importer.reader import DELIMITER_NAMES, ENCODINGS, read_source
 from importer.writer import write_standard_file
+from logic.merge import FileIndex
 from model import schema
 from model.club_file import choice
 from model.values import parse_date, to_text
@@ -40,12 +41,16 @@ def make_table(columns):
 
 
 # a list of another program becomes a member list in the standard format; the original stays unchanged.
-# After accept: result_path (the new file) and imported (number of members)
+# After accept: result_path (the new file) and imported (number of members). With merge_target (Members of the
+# open file) the list is compared with it instead (ui.member_actions shows the differences): people that are in
+# the file already need no complete data
 class ImportWizard(QWizard):
 
-    def __init__(self, path, config, editor, parent=None):
+    def __init__(self, path, config, editor, parent=None, merge_target=None):
         super().__init__(parent)
-        self.setWindowTitle("Mitgliederliste importieren")
+        self.merge_target = merge_target
+        self.index = FileIndex(merge_target.members) if merge_target is not None else None
+        self.setWindowTitle("Liste abgleichen" if merge_target is not None else "Mitgliederliste importieren")
         self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
         self.setMinimumSize(920, 660)
         for button, text in ((QWizard.WizardButton.BackButton, "< Zurück"),
@@ -65,6 +70,21 @@ class ImportWizard(QWizard):
         self.target_page = TargetPage()
         for page in (self.source_page, self.columns_page, self.values_page, self.check_page, self.target_page):
             self.addPage(page)
+        if merge_target is not None:
+            self.setButtonText(QWizard.WizardButton.FinishButton, "Weiter zum Abgleich")
+
+    # the member of the open file this row belongs to (merge only)
+    def match(self, import_row):
+        if self.index is None:
+            return None
+        return self.index.find(import_row.values, by_number="nr" in self.targets)[0]
+
+    # what prevents taking over a row; a person that is in the file already needs no complete data
+    def blocking(self, import_row):
+        return [] if self.match(import_row) is not None else import_row.problems()
+
+    def unconfirmed(self, import_row):
+        return set() if self.match(import_row) is not None else import_row.estimated
 
 
 class SourcePage(QWizardPage):
@@ -348,17 +368,20 @@ class CheckPage(QWizardPage):
         return value.strftime("%d.%m.%Y") if hasattr(value, "strftime") else str(value)
 
     def show_row(self, index):
-        import_row = self.wizard().rows[index]
-        problems = dict(import_row.problems())
+        wizard = self.wizard()
+        import_row = wizard.rows[index]
+        problems = dict(wizard.blocking(import_row))
         for offset, field in enumerate(CHECK_FIELDS, start=2):
             item = QTableWidgetItem(self.text(import_row, field))
             if field in problems:
                 item.setBackground(QBrush(RED))
-            elif field in import_row.estimated:
+            elif field in wizard.unconfirmed(import_row):
                 item.setBackground(QBrush(YELLOW))
                 item.setToolTip("geschätzt")
             self.table.setItem(index, offset, item)
-        hint = QTableWidgetItem("; ".join([message for _, message in import_row.problems()] + import_row.hints()))
+        member = wizard.match(import_row)
+        found = ["in der Mitgliederliste: Nr " + str(member.nr)] if member is not None else []
+        hint = QTableWidgetItem("; ".join(found + [message for _, message in problems.items()] + import_row.hints()))
         hint.setToolTip(hint.text())
         hint.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         self.table.setItem(index, len(self.HEADINGS) - 1, hint)
@@ -424,8 +447,10 @@ class CheckPage(QWizardPage):
         self.update_state()
 
     def confirm_estimates(self):
-        for import_row in self.wizard().rows:
-            import_row.estimated.clear()
+        wizard = self.wizard()
+        for import_row in wizard.rows:
+            if wizard.match(import_row) is None:   # in the file already: the estimate is not used anyway
+                import_row.estimated.clear()
         self.table.blockSignals(True)
         for index in range(self.table.rowCount()):
             self.show_row(index)
@@ -433,14 +458,16 @@ class CheckPage(QWizardPage):
         self.update_state()
 
     def apply_filter(self):
-        for index, import_row in enumerate(self.wizard().rows):
-            needs_look = bool(import_row.problems() or import_row.estimated)
+        wizard = self.wizard()
+        for index, import_row in enumerate(wizard.rows):
+            needs_look = bool(wizard.blocking(import_row) or wizard.unconfirmed(import_row))
             self.table.setRowHidden(index, self.only_problems.isChecked() and not needs_look)
 
     def counts(self):
-        rows = [row for row in self.wizard().rows if row.include]
-        return (len(rows), sum(1 for row in rows if row.problems()), sum(1 for row in rows if row.estimated),
-                len(self.wizard().rows) - len(rows))
+        wizard = self.wizard()
+        rows = [row for row in wizard.rows if row.include]
+        return (len(rows), sum(1 for row in rows if wizard.blocking(row)),
+                sum(1 for row in rows if wizard.unconfirmed(row)), len(wizard.rows) - len(rows))
 
     def update_state(self):
         taken, problems, estimated, left_out = self.counts()
@@ -470,7 +497,7 @@ class TargetPage(QWizardPage):
         self.setSubTitle("Die Mitglieder werden in eine neue Datei im Standardformat der App übernommen. "
                          "Ihre bisherige Liste bleibt unverändert.")
         layout = QVBoxLayout(self)
-        form = QFormLayout()
+        self.form = form = QFormLayout()
         self.club_edit = QLineEdit()
         self.club_edit.setPlaceholderText("z. B. TSV Musterdorf (freiwillig)")
         form.addRow("Vereinsname:", self.club_edit)
@@ -484,8 +511,9 @@ class TargetPage(QWizardPage):
         self.folder_label = muted("")
         form.addRow("", self.folder_label)
         layout.addLayout(form)
-        layout.addWidget(muted("Tipp: Legen Sie die neue Datei dort ab, wo der Vorstand sie teilt (z. B. Dropbox, "
-                               "OneDrive, Nextcloud). Daneben entsteht später der Ordner „Sicherungen“."))
+        self.tip = muted("Tipp: Legen Sie die neue Datei dort ab, wo der Vorstand sie teilt (z. B. Dropbox, "
+                         "OneDrive, Nextcloud). Daneben entsteht später der Ordner „Sicherungen“.")
+        layout.addWidget(self.tip)
         self.summary = QLabel()
         layout.addWidget(self.summary)
         layout.addStretch()
@@ -495,6 +523,17 @@ class TargetPage(QWizardPage):
 
     def initializePage(self):
         wizard = self.wizard()
+        merging = wizard.merge_target is not None
+        for row in range(self.form.rowCount()):
+            self.form.setRowVisible(row, not merging)
+        self.tip.setVisible(not merging)
+        if merging:
+            self.setTitle("5. Abgleichen")
+            self.setSubTitle("Im nächsten Schritt sehen Sie, was sich in der Mitgliederliste ändern würde, und "
+                             "entscheiden für jede Änderung.")
+            self.summary.setText(str(sum(1 for row in wizard.rows if row.include)) + " Zeilen werden mit der "
+                                 "Mitgliederliste verglichen.")
+            return
         if self.target is None:
             folder = os.path.dirname(os.path.abspath(wizard.path))
             self.target = os.path.join(folder, "Mitgliederliste.xlsx")
@@ -520,6 +559,8 @@ class TargetPage(QWizardPage):
 
     def validatePage(self):
         wizard = self.wizard()
+        if wizard.merge_target is not None:
+            return True
         if os.path.abspath(self.target) == os.path.abspath(wizard.path):
             self.error.setText("Bitte einen anderen Namen wählen: Die bisherige Liste soll unverändert bleiben.")
             return False

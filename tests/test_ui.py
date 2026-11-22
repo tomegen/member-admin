@@ -480,6 +480,80 @@ class MemberEditingUiTest(StandardFileBase):
         self.assertIn(self.path, self.window.watcher.files())
 
 
+class MergeUiTest(StandardFileBase):
+
+    def setUp(self):
+        super().setUp()
+        self.window.ask = lambda title, text: self.questions.append(text) or True
+        self.window.inform = lambda title, text: self.questions.append(text)
+        self.questions = []
+
+    def member(self, nr):
+        return [m for m in self.window.members.members if m.nr == nr][0]
+
+    def test_a_list_is_compared_and_the_user_decides(self):
+        from openpyxl import Workbook
+        from ui.merge_dialog import MergeDialog
+        book = Workbook()
+        for row in [["Name", "Vorname", "Geschlecht", "Geburtstag", "Eintritt", "E-Mail", "Ort"],
+                    ["Muster", "Max", None, None, None, "max@example.org", "Neustadt"],     # in the file
+                    ["Neu", "Nina", "w", "04.03.2001", "01.11.2026", "nina@example.org", None]]:
+            book.active.append(row)
+        path = os.path.join(self.tmp.name, "mails.xlsx")
+        book.save(path)
+
+        def run_wizard(wizard):
+            wizard.restart()
+            for _ in range(3):
+                wizard.next()
+            check = wizard.check_page
+            self.assertTrue(check.isComplete())                 # Max needs no complete data: he is in the file
+            self.assertIn("Nr 1", check.table.item(0, 9).text())
+            wizard.next()
+            wizard.accept()
+            return wizard.result()
+
+        def decide(dialog):
+            self.assertEqual([(i.kind, i.name()) for i in dialog.items], [("geändert", "Max Muster"), ("neu", "Nina Neu")])
+            self.assertEqual(dialog.items[0].chosen, {"email", "ort"})
+            town = [row for row in dialog.field_items if row.data(0, Qt.ItemDataRole.UserRole)[1] == "ort"][0]
+            town.setCheckState(0, Qt.CheckState.Unchecked)                           # keep the town
+            dialog.leave_items[0].setCheckState(0, Qt.CheckState.Checked)            # Eva is not in the list
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(ImportWizard, "exec", run_wizard), mock.patch.object(MergeDialog, "exec", decide):
+            self.assertTrue(self.window.actions.merge_list(path))
+        self.assertEqual((self.member(1).email, self.member(1).ort), ("max@example.org", ""))
+        self.assertEqual((self.member(3).first_name, self.member(3).email), ("Nina", "nina@example.org"))
+        self.assertEqual(self.member(2).status, "ausgetreten")
+
+    def test_conflict_copy_is_offered_compared_and_moved_away(self):
+        from ui.merge_dialog import MergeDialog
+        copy = os.path.join(self.tmp.name, "Mitglieder (Konfliktkopie von Eva).xlsx")
+        book = load_workbook(self.path)
+        book["Mitglieder"]["N2"] = "Kopiestadt"
+        book.save(copy)
+        self.window.reload()
+        self.assertFalse(self.window.members_page.copies_button.isHidden())
+
+        def take(dialog):
+            self.assertEqual([d.incoming for d in dialog.items[0].differences], ["Kopiestadt"])
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(MergeDialog, "exec", take):
+            self.window.offer_conflict_copies()
+        self.assertIn("Konfliktkopie", self.questions[0])
+        self.assertEqual(self.member(1).ort, "Kopiestadt")
+        self.assertFalse(os.path.exists(copy))
+        self.assertEqual(len([n for n in os.listdir(os.path.join(self.tmp.name, "Sicherungen"))
+                              if "Konfliktkopie" in n]), 1)
+        self.assertTrue(self.window.members_page.copies_button.isHidden())
+        self.window.offer_conflict_copies()                                 # nothing left: no question
+        self.assertEqual(len(self.questions), 1)
+
+
 class ImportUiTest(unittest.TestCase):
 
     def setUp(self):
