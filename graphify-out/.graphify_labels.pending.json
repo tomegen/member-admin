@@ -20,7 +20,7 @@
   "18": "build",
   "19": "strategy",
   "20": "os",
-  "21": "template.py",
+  "21": "StandardFileTest",
   "22": "MemberEditingUiTest",
   "23": "ResultPage",
   "24": "Ideen für das Mitglieder Management Portal",
@@ -28,9 +28,9 @@
   "26": "test_ui.py",
   "27": "import_wizard.py",
   "28": "suggest_columns",
-  "29": "CheckPage",
-  "30": "read_source",
-  "31": "Table",
+  "29": "DataCheckTest",
+  "30": "MemberListError",
+  "31": "mitgliederverwaltung.py",
   "32": "Exception",
-  "33": "QWidget"
+  "33": "IssuesPage"
 }

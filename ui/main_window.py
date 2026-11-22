@@ -122,6 +122,8 @@ class MainWindow(QMainWindow):
         self.members_page.exit_requested.connect(self.actions.record_exit)
         self.members_page.numbers_requested.connect(self.actions.assign_numbers)
         self.members_page.merge_requested.connect(lambda: self.actions.merge_list())
+        self.members_page.delete_requested.connect(self.actions.delete_member)
+        self.members_page.due_requested.connect(self.actions.delete_due)
         self.members_page.copies_requested.connect(lambda: self.actions.check_conflict_copies())
         self.asked_copies = set()   # conflict copies are offered once per start of the app
         self.birthdays = ResultPage(ResultSpec(
@@ -250,7 +252,8 @@ class MainWindow(QMainWindow):
 
     # conflict copies of the open file (store.conflict_copies); shown on the members tab
     def update_conflict_copies(self):
-        copies = set(conflict_copies(self.filename, self.members.file_id)) if self.members.standard else set()
+        standard = self.members is not None and self.members.standard
+        copies = set(conflict_copies(self.filename, self.members.file_id)) if standard else set()
         self.members_page.set_conflict_copies(len(copies))
         return copies
 

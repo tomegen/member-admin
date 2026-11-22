@@ -8,6 +8,7 @@ from unittest import mock
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 
@@ -18,8 +19,8 @@ from model.members import Members
 from store import backups
 from model.club_settings import ClubSettings, Occasion
 from logic.merge import CHANGED, NEW, SAME, SIMILAR, compare, member_values
-from store.changes import (add_member, assign_numbers, combine, merge_members, update_functions, update_member,
-                           update_settings)
+from store.changes import (add_member, assign_numbers, combine, delete_members, merge_members, update_functions,
+                           update_member, update_settings)
 from store.conflict_copies import conflict_copies, move_to_backups
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import lock_owner, save
@@ -118,6 +119,13 @@ class UpdateTest(StoreTest):
         self.edit_in_excel(lambda sheet: sheet.cell(row=2, column=14, value="Handystadt"))
         save(self.path, update_member(1, snapshot.rows[1], {"ort": "", "first_name": "Maximilian"}), "A", now=NOW)
         self.assertEqual((self.member(1).ort, self.member(1).first_name), ("Handystadt", "Maximilian"))
+
+    def test_a_field_can_be_emptied(self):
+        snapshot = self.read().snapshot
+        save(self.path, update_member(1, snapshot.rows[1], {"plz": "", "phone": None}), "A", now=NOW)
+        self.assertEqual(self.member(1).plz, "")
+        self.assertIsNone(load_workbook(self.path)["Mitglieder"]["M2"].value)
+        self.assertEqual(self.log()[-1][4:], ("PLZ", "01234", None))
 
     def test_dates_and_status(self):
         snapshot = self.read().snapshot
@@ -432,6 +440,11 @@ class FunctionsTest(StoreTest):
         self.assertEqual([(f.row, f.function) for f in self.read().functions],
                          [(2, "Vorsitzender"), (3, "Jugendwart"), (4, "Kassier")])
 
+    def test_an_end_date_can_be_removed(self):
+        self.write_functions([(1, "Max Muster", "Kassier", datetime.date(2020, 1, 1), datetime.date(2022, 1, 1))])
+        save(self.path, update_functions(1, self.keys(1), [self.KASSIER]), "A", now=NOW)
+        self.assertTrue(pd.isna(self.read().functions_of(1)[0].end))
+
     def test_functions_changed_meanwhile_are_not_overwritten(self):
         self.write_functions([(1, "Max Muster", "Kassier")])
         base = self.keys(1)
@@ -521,6 +534,9 @@ class ConflictCopyTest(StoreTest):
         self.assertEqual(os.path.basename(moved), "Mitglieder (Konfliktkopie von Eva 2026-11-22) 2026-11-22 140212.xlsx")
         self.assertEqual(conflict_copies(self.path, members.file_id), [])
 
+    def test_a_missing_folder_has_no_copies(self):
+        self.assertEqual(conflict_copies(os.path.join(self.tmp.name, "weg", "Mitglieder.xlsx"), "id"), [])
+
     def test_changes_in_a_copy_are_compared_by_number(self):
         copy = self.copy_as("Mitglieder-LAPTOP.xlsx")
         book = load_workbook(copy)
@@ -531,6 +547,53 @@ class ConflictCopyTest(StoreTest):
         items, only = compare(incoming, current.members, by_number=True)
         self.assertEqual([(item.kind, [d.incoming for d in item.differences]) for item in items],
                          [(CHANGED, ["Kopiestadt"]), (SAME, [])])
+
+
+class DeleteTest(StoreTest):
+
+    def leave(self, nr, row, exit_date):
+        self.edit_in_excel(lambda sheet: (sheet.cell(row=row, column=7, value="ausgetreten"),
+                                          sheet.cell(row=row, column=8, value=exit_date)))
+
+    def test_deletion_period_finds_left_members(self):
+        self.leave(1, 2, datetime.date(2015, 12, 31))
+        self.assertEqual(self.read().deletion_due(), [])                    # "nie" in the template
+        self.edit_in_excel(lambda book: book["Einstellungen"].__setitem__("K3", 10), whole_book=True)
+        members = self.read()
+        self.assertEqual([m.nr for m in members.deletion_due()], [1])       # 31.12.2025 is before 22.11.2026
+        self.assertIn("laut Löschfrist", members.issues[0].message)
+        self.assertFalse(members.issues[0].active)
+        self.edit_in_excel(lambda book: book["Einstellungen"].__setitem__("K3", 11), whole_book=True)
+        self.assertEqual(self.read().deletion_due(), [])
+
+    def test_delete_removes_row_functions_and_personal_data_in_the_log(self):
+        save(self.path, combine(update_member(1, self.read().snapshot.rows[1], {"ort": "Musterstadt"}),
+                                update_functions(1, [], [("Kassier", None, None, "")]),
+                                update_functions(2, [], [("Jugendwart", None, None, "")])), "A", now=NOW)
+        saved = save(self.path, delete_members([(1, "Max Muster")]), "A", now=NOW)
+        self.assertEqual([(e.nr, e.name, e.action) for e in saved.entries], [(1, "", "gelöscht")])
+        members = self.read()
+        self.assertEqual([(m.nr, m.first_name) for m in members.members], [(2, "Eva")])
+        self.assertEqual([(f.nr, f.function) for f in members.functions], [(2, "Jugendwart")])
+        log = self.log()
+        self.assertEqual([row for row in log if row[1] == 1],
+                         [("A", 1, None, "geändert", "Ort", None, None), ("A", 1, None, "geändert", "Funktionen", None, None),
+                          ("A", 1, None, "gelöscht", None, None, None)])
+        self.assertEqual([row[2] for row in log if row[1] == 2], ["Eva Beispiel"])          # others stay
+        self.assertEqual(members.issues, [])
+
+    def test_the_number_of_a_deleted_member_is_not_used_again(self):
+        save(self.path, delete_members([(2, "Eva Beispiel")]), "A", now=NOW)
+        values = {"last_name": "Neu", "first_name": "Nina", "gender": "weiblich", "status": "aktiv",
+                  "birthday": datetime.date(2001, 3, 4), "member_since": datetime.date(2026, 11, 1)}
+        save(self.path, add_member(values), "A", now=NOW)
+        self.assertEqual([m.nr for m in self.read().members], [1, 3])
+
+    def test_a_member_changed_meanwhile_is_not_deleted(self):
+        self.edit_in_excel(lambda sheet: sheet.cell(row=2, column=3, value="Moritz"))
+        with self.assertRaises(SaveError):
+            save(self.path, delete_members([(1, "Max Muster")]), "A", now=NOW)
+        self.assertEqual(len(self.read().members), 2)
 
 
 class BackupTest(unittest.TestCase):

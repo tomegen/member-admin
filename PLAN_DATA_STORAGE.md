@@ -311,6 +311,14 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   Einstellungen der Kopie werden nicht abgeglichen. Vor einem Abgleich brauchen alle Mitglieder eine Nr. Verschobene
   Konfliktkopien fallen nicht unter die Rotation der Sicherungen.
 
+- **AP 7 erledigt (2026-11-22):** `Members.deletion_due`/`is_due` (Löschfrist ab „Austritt am“, `shift_years`),
+  Hinweis in Datenprüfung (nicht gezählt) und Übersicht, `store.changes.delete_members` (Zeile + Funktionen weg,
+  frühere Protokollzeilen ohne Name/alt/neu, neue Zeile „gelöscht“), `highest_nr` berücksichtigt das Protokoll,
+  `ui/delete_dialog.py`, Einzel-Löschen mit Warnung bei nicht ausgetretenen Mitgliedern (Menü „Weitere …“).
+  **Dabei behoben:** Leeren eines Feldes wirkte nicht (`sheet.cell(..., value=None)` setzt in openpyxl nichts) →
+  `store.sheet.write_cell`; betraf Mitglied-Dialog (AP 4), Funktionen und Einstellungslisten. Suche nach
+  Konfliktkopien übersteht einen verschwundenen Ordner.
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

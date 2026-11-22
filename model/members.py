@@ -1,12 +1,12 @@
 import pandas as pd
-from model import club_file
+from logic.date_utils import shift_years
+from model import club_file, schema
 from model.checks import plausibility_issues
 from model.club_settings import ClubSettings, read_settings
-from model.functions import read_functions
 from model.columns import detect_columns, missing_mandatory
+from model.functions import read_functions
 from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
-from model import schema
 from model.schema import ACTIVE, LEFT, PASSIVE
 from model.values import parse_date, to_text  # noqa: F401 (also imported from here)
 
@@ -36,6 +36,7 @@ class Members:
         self.members = []
         self.issues = []
         self.filename = filename
+        self.today = today
         self.snapshot = None   # only for the standard file, which the app can change
         self.settings = ClubSettings()   # an old list has no settings sheet: defaults
         self.functions = []              # rows of the sheet "Funktionen" (model.functions.Function)
@@ -63,11 +64,24 @@ class Members:
         except club_file.MissingColumns as e:
             raise missing_columns_error(e.missing, e.found)
         self.settings, setting_issues = read_settings(book)
+        setting_issues += [Issue(row, member.full_name(), False, "Austritt vor mehr als " +
+                                 str(self.settings.delete_after) + " Jahren: laut Löschfrist kann der Eintrag "
+                                 "endgültig gelöscht werden (Tab „Mitglieder“).")
+                           for row, member in rows if self.is_due(member)]
         self.functions, function_issues = read_functions(book, [(member.nr, member.full_name()) for _, member in rows])
         self.issues += issues + setting_issues + function_issues
         self.snapshot = club_file.Snapshot(club_file.file_hash(data), keys)
         self.file_id = to_text(club_file.read_info(book).get(schema.FILE_ID_KEY)) or None
         return rows
+
+    # left members whose exit is longer ago than the deletion period of the club (never, if there is none)
+    def deletion_due(self):
+        return [member for member in self.members if self.is_due(member)]
+
+    def is_due(self, member):
+        years = self.settings.delete_after
+        return years is not None and member.status == LEFT and member.nr is not None and \
+            not pd.isna(member.exit_date) and shift_years(member.exit_date, years) <= self.today
 
     def functions_of(self, nr):
         return [function for function in self.functions if function.nr == nr]

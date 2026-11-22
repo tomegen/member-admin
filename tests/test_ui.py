@@ -439,6 +439,15 @@ class MemberEditingUiTest(StandardFileBase):
         max_ = self.member(1)
         self.assertEqual((max_.ort, max_.phone_number, max_.email), ("Musterstadt", "0999", "max@example.org"))
 
+    def test_a_field_emptied_in_the_dialog_is_empty_in_the_file(self):
+        from ui.member_dialog import MemberDialog
+        self.edit_in_excel({"O2": "0123 4567"})
+        self.window.reload()
+        with mock.patch.object(MemberDialog, "exec", self.filling({"phone": ""})):
+            self.assertTrue(self.window.actions.edit_member(self.member(1)))
+        self.assertEqual(self.member(1).phone_number, "")
+        self.assertIsNone(load_workbook(self.path)["Mitglieder"]["O2"].value)
+
     def test_exit_keeps_the_member(self):
         from ui.member_dialog import ExitDialog
 
@@ -552,6 +561,44 @@ class MergeUiTest(StandardFileBase):
         self.assertTrue(self.window.members_page.copies_button.isHidden())
         self.window.offer_conflict_copies()                                 # nothing left: no question
         self.assertEqual(len(self.questions), 1)
+
+
+class DeleteUiTest(StandardFileBase):
+
+    def setUp(self):
+        super().setUp()
+        book = load_workbook(self.path)
+        book["Mitglieder"]["G3"], book["Mitglieder"]["H3"] = "ausgetreten", datetime.date(2010, 6, 30)   # Eva
+        book["Einstellungen"]["K3"] = 10                                                                    # years
+        book.save(self.path)
+        self.window.reload()
+        self.window.ask = lambda title, text: self.questions.append(text) or True
+        self.questions = []
+
+    def test_deletion_period_is_shown_and_deletes_after_confirmation(self):
+        from ui.delete_dialog import DeleteDialog
+        self.assertFalse(self.window.members_page.due_button.isHidden())
+        self.assertIn("1 ausgetretenes Mitglied kann", self.window.overview.deletion_label.text())
+
+        def confirm(dialog):
+            self.assertEqual([m.first_name for m in dialog.chosen()], ["Eva"])
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(DeleteDialog, "exec", confirm):
+            self.assertTrue(self.window.actions.delete_due())
+        self.assertEqual([m.first_name for m in self.window.members.members], ["Max"])
+        self.assertTrue(self.window.members_page.due_button.isHidden())
+        self.assertFalse(self.window.overview.deletion_label.isVisible())
+
+    def test_a_single_entry_is_deleted_with_a_warning_for_members(self):
+        max_ = self.window.members.members[0]
+        self.window.ask = lambda title, text: self.questions.append(text) or False
+        self.assertFalse(self.window.actions.delete_member(max_))
+        self.assertIn("kein ausgetretenes Mitglied", self.questions[0])
+        self.window.ask = lambda title, text: True
+        self.assertTrue(self.window.actions.delete_member(max_))
+        self.assertEqual([m.first_name for m in self.window.members.members], ["Eva"])
 
 
 class ImportUiTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 import pandas as pd
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMenu,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from model import schema
@@ -38,6 +38,8 @@ class MembersPage(QWidget):
     exit_requested = Signal(object)
     numbers_requested = Signal()
     merge_requested = Signal()
+    delete_requested = Signal(object)
+    due_requested = Signal()
     copies_requested = Signal()
 
     def __init__(self):
@@ -92,15 +94,21 @@ class MembersPage(QWidget):
         self.numbers_button.setToolTip("Mitglieder, die in Excel ohne Nr eingetragen wurden, bekommen die nächsten "
                                        "freien Nummern.")
         self.numbers_button.clicked.connect(self.numbers_requested.emit)
-        self.merge_button = secondary_button("Liste abgleichen …")
-        self.merge_button.setToolTip("Eine andere Liste (z. B. neue E-Mail-Adressen oder den Export des Verbands) mit "
-                                     "dieser Mitgliederliste vergleichen und Änderungen übernehmen.")
-        self.merge_button.clicked.connect(self.merge_requested.emit)
+        # rarely used: in a menu, so the buttons fit on small screens
+        self.more_button = secondary_button("Weitere …")
+        menu = QMenu(self.more_button)
+        self.merge_action = menu.addAction("Liste abgleichen … (z. B. Export des Verbands, neue E-Mail-Adressen)")
+        self.merge_action.triggered.connect(self.merge_requested.emit)
+        self.delete_action = menu.addAction("Markiertes Mitglied endgültig löschen … (nur falsch angelegte Einträge)")
+        self.delete_action.triggered.connect(lambda: self.request(self.delete_requested))
+        self.more_button.setMenu(menu)
+        self.due_button = secondary_button("Löschfrist …")
+        self.due_button.clicked.connect(self.due_requested.emit)
         self.copies_button = secondary_button("Konfliktkopie prüfen")
         self.copies_button.clicked.connect(self.copies_requested.emit)
         self.copies_button.hide()
-        for button in (self.new_button, self.edit_button, self.exit_button, self.numbers_button, self.merge_button,
-                       self.copies_button):
+        for button in (self.new_button, self.edit_button, self.exit_button, self.more_button, self.numbers_button,
+                       self.due_button, self.copies_button):
             buttons.addWidget(button)
         buttons.addStretch()
         layout.addLayout(buttons)
@@ -122,8 +130,11 @@ class MembersPage(QWidget):
                                 "Diese Liste ist noch nicht im Standardformat der App, deshalb kann sie hier nur "
                                 "angezeigt werden. Bearbeiten Sie sie in Excel.")
         self.new_button.setEnabled(editable)
-        self.merge_button.setEnabled(editable)
+        self.merge_action.setEnabled(editable)
         self.numbers_button.setVisible(editable and any(m.nr is None for m in members.members))
+        due = len(members.deletion_due())
+        self.due_button.setText("Löschfrist: " + str(due) + " löschen …")
+        self.due_button.setVisible(due > 0)
         self.refresh()
 
     def set_conflict_copies(self, count):
@@ -178,6 +189,7 @@ class MembersPage(QWidget):
         editable = self.members is not None and self.members.standard
         self.edit_button.setEnabled(editable and member is not None)
         self.exit_button.setEnabled(editable and member is not None and member.status != schema.LEFT)
+        self.delete_action.setEnabled(editable and member is not None)
 
     def request(self, signal):
         member = self.selected_member()

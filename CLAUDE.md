@@ -10,7 +10,8 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 - Start: Mitgliederliste öffnen (Dialog, Drag & Drop oder „Zuletzt verwendet“). Die App arbeitet nur mit dem **Standardformat**; jede andere Liste (`.xlsx`, `.xls`, `.csv`) öffnet den **Import-Assistenten** (Datei → Spalten → Werte → Prüfen/Ergänzen → neue Datei speichern; Original bleibt unverändert).
 - **Auswertungsjahr** im Kopf (Standard: ab Oktober das Folgejahr). Es steuert Geburtstage, Ehrungen, „Neue Mitglieder“.
 - Tabs: Übersicht (mit „Demnächst“: nächste 30 Tage) · **Mitglieder** (Suche, Filter; bei Standarddateien anlegen, bearbeiten inkl. Funktionen, Austritt, Nummern vergeben) · Geburtstage · Ehrungen · Statistik · Datenprüfung.
-- Tab „Mitglieder“: „Liste abgleichen …“ (z. B. Verbandsexport, E-Mail-Liste) und „Konfliktkopie prüfen“ (wird nach dem Öffnen einmal pro Start angeboten).
+- Löschfrist (Einstellungsblatt, Standard „nie“): fällige Ausgetretene erscheinen in Übersicht/Datenprüfung, Knopf „Löschfrist: n löschen …“; Löschen nur nach Bestätigung, entfernt Zeile + Funktionen, anonymisiert das Protokoll; gelöschte Nr werden nie wieder vergeben (`store.changes.highest_nr` liest auch das Protokoll).
+- Tab „Mitglieder“: unter „Weitere …“ „Liste abgleichen …“ und „endgültig löschen“; (z. B. Verbandsexport, E-Mail-Liste) und „Konfliktkopie prüfen“ (wird nach dem Öffnen einmal pro Start angeboten).
 - Die geöffnete Datei wird überwacht (`QFileSystemWatcher`): Änderungen von außen (Excel, Sync) werden automatisch neu eingelesen.
 - **Einstellungen** (Knopf im Kopf): bei einer **Standarddatei** im Blatt „Einstellungen“ der Datei (Anlässe mit Geschenk, Auswahllisten, Vereinsname, Löschfrist, Erinnerung, ob Passive zählen; `ClubSettingsDialog`, gespeichert über `store`); bei alten Listen Auswahl der Zahlen in `QSettings`. `config.ini` liefert nur die Standardwerte.
 - Geburtstage/Ehrungen: ganzes Jahr oder eigener Zeitraum, Auswahl der runden Zahlen,
@@ -52,6 +53,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `docs/` | Download-Seite für GitHub Pages (`index.html`, `start.png`, `qr-download.svg`), verlinkt `releases/latest/download/…` |
 | `importer/` | Import: `reader` (xlsx/xls/csv, Zeichensatz, Trennzeichen), `mapping` (Kopfzeile, Spalten-/Wertevorschläge, „Name, Vorname“ und „PLZ Ort“ trennen, `convert`, Nummern), `gender` + `first_names` (Geschlecht schätzen), `writer` (neue Standarddatei) |
 | `ui/import_wizard.py` | Import-Assistent (5 Schritte, Sammel-Ausfüllen, Schätzungen bestätigen); mit `merge_target` Abgleich mit der offenen Datei (vorhandene Personen brauchen keine vollständigen Daten) |
+| `ui/delete_dialog.py` | Liste der zu löschenden Mitglieder (Löschfrist), `store.changes.delete_members` |
 | `logic/merge.py`, `store/conflict_copies.py`, `ui/merge_dialog.py` | Abgleich je Person (Nr nur zusammen mit dem Namen, sonst Name+Geburtstag, ohne Geburtstag eindeutiger Name; leere Werte löschen nie), `store.changes.merge_members`; Konfliktkopien (gleicher Dateianfang + Datei-ID) finden, abgleichen, nach `Sicherungen/` verschieben |
 | `example_file.xlsx` | Beispielliste im **Standardformat** (10 erfundene Personen, wird mit der App ausgeliefert, Smoke-Test/Screenshots) |
 | `tests/fixtures/old_list.xlsx` | alte Beispielliste (Format vor 0.2) für Import-Tests |

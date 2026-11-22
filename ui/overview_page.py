@@ -44,6 +44,10 @@ class OverviewPage(QWidget):
         grid.addWidget(self.inactive_card[0], 1, 0)
         grid.addWidget(self.issues_card[0], 1, 1)
         layout.addLayout(grid)
+        self.deletion_label = QLabel()   # left members whose deletion period is over
+        self.deletion_label.setStyleSheet("color: #b45309;")
+        self.deletion_label.setWordWrap(True)
+        layout.addWidget(self.deletion_label)
 
         # what is coming up in the next days (independent of the evaluation year)
         layout.addWidget(heading("Demnächst (nächste " + str(UPCOMING_DAYS) + " Tage)", 16))
@@ -82,6 +86,12 @@ class OverviewPage(QWidget):
             self.issues_card[2].setText(str(active_issues) + " davon bei Mitgliedern – siehe Tab „Datenprüfung“")
         else:
             self.issues_card[2].setText("Keine Auffälligkeiten bei Mitgliedern")
+
+        due = len(members.deletion_due())
+        self.deletion_label.setText(("1 ausgetretenes Mitglied kann" if due == 1 else str(due) + " ausgetretene "
+                                     "Mitglieder können") + " laut Löschfrist endgültig gelöscht werden – Tab "
+                                    "„Mitglieder“, Knopf „Löschfrist …“.")
+        self.deletion_label.setVisible(bool(due))
 
         today = pd.Timestamp.now() if today is None else pd.Timestamp(today)
         rows = find_upcoming(members.counted("birthdays"), members.counted("honors"), birthdays, honors, today,

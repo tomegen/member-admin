@@ -13,6 +13,13 @@ def is_empty(value):
     return cell_key(value) == ""
 
 
+# sets the value of a cell, also to empty (sheet.cell(..., value=None) would leave the old value)
+def write_cell(sheet, row, column, value):
+    cell = sheet.cell(row=row, column=column)
+    cell.value = value
+    return cell
+
+
 # last row of a sheet with content; prepared rows with only formats or dropdowns do not count
 def last_used_row(sheet):
     return max((row for (row, _), cell in sheet._cells.items() if row > 1 and not is_empty(cell.value)), default=1)
@@ -48,7 +55,7 @@ class MemberSheet:
 
     def set(self, row, field, value):
         column = COLUMNS_BY_FIELD[field]
-        cell = self.sheet.cell(row=row, column=self.columns[field], value=cell_value(column, value))
+        cell = write_cell(self.sheet, row, self.columns[field], cell_value(column, value))
         if column.kind == "date":
             cell.number_format = "DD.MM.YYYY"
 

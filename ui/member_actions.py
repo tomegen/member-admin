@@ -10,10 +10,12 @@ from importer.reader import SourceError
 from logic.merge import CHANGED, NEW, SIMILAR, compare, member_values
 from model.functions import function_key
 from model.members import MemberListError, Members
-from store.changes import add_member, assign_numbers, combine, merge_members, update_functions, update_member
+from store.changes import (add_member, assign_numbers, combine, delete_members, merge_members, update_functions,
+                           update_member)
 from store.conflict_copies import conflict_copies, move_to_backups
 from store.errors import Conflict, Duplicate
 from ui.conflict_dialog import ConflictDialog
+from ui.delete_dialog import DeleteDialog
 from ui.import_wizard import ImportWizard
 from ui.member_dialog import ExitDialog, MemberDialog
 from ui.merge_dialog import MergeDialog
@@ -77,6 +79,31 @@ class MemberActions:
 
     def assign_numbers(self):
         return self.window.save_change(assign_numbers())
+
+    # left members whose deletion period is over: the user ticks who is deleted for good
+    def delete_due(self):
+        due = self.members.deletion_due()
+        if not due:
+            return False
+        dialog = DeleteDialog(due, "Diese ausgetretenen Mitglieder sind länger als " +
+                              str(self.members.settings.delete_after) + " Jahre ausgetreten (Löschfrist des Vereins, "
+                              "Blatt „Einstellungen“). Angehakte Einträge werden endgültig gelöscht.", self.window)
+        if not dialog.exec() or not dialog.chosen():
+            return False
+        return self.window.save_change(delete_members([(m.nr, m.full_name()) for m in dialog.chosen()]))
+
+    # one entry for good, e.g. entered by mistake (leaving is "Austritt erfassen")
+    def delete_member(self, member):
+        if self.base_of(member) is None:
+            return False
+        warning = "" if member.status == "ausgetreten" else (
+            "\n\nAchtung: " + member.full_name() + " ist kein ausgetretenes Mitglied. Wer austritt, sollte mit "
+            "„Austritt erfassen“ in der Liste bleiben (Statistik, Ehrungen). Löschen nur, wenn der Eintrag falsch ist.")
+        if not self.window.ask("Endgültig löschen", member.full_name() + " (Nr " + str(member.nr) + ") wird endgültig "
+                               "aus der Mitgliederliste gelöscht, mit allen Funktionen. Im Änderungsprotokoll bleibt "
+                               "nur „Nr " + str(member.nr) + " gelöscht“." + warning + "\n\nWirklich löschen?"):
+            return False
+        return self.window.save_change(delete_members([(member.nr, member.full_name())]))
 
     # comparing needs a number for everybody in the file
     def numbers_ready(self):

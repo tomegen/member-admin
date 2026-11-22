@@ -3,12 +3,12 @@ from collections import namedtuple
 import pandas as pd
 
 from model import schema
-from model.club_file import cell_key, heading_columns, sheet_rows
+from model.club_file import cell_key, heading_columns, sheet_rows, whole_number
 from model.club_settings import SETTINGS_COLUMNS, general_text, read_settings
 from model.columns import normalize
-from model.functions import function_key, read_functions
+from model.functions import function_key, name_key, read_functions
 from store.errors import Conflict, Duplicate, FieldConflict, SaveError
-from store.sheet import COLUMNS_BY_FIELD, COLUMNS_BY_HEADING, cell_value, is_empty, last_used_row
+from store.sheet import COLUMNS_BY_FIELD, COLUMNS_BY_HEADING, cell_value, is_empty, last_used_row, write_cell
 
 # a line of the sheet "Änderungsprotokoll"; old and new are cell keys (see cell_key)
 LogEntry = namedtuple("LogEntry", "nr name action field old new")
@@ -65,7 +65,7 @@ def add_member(values, allow_duplicate=False, functions=(), action="angelegt"):
                 if (keys.get("last_name", "").casefold(), keys.get("first_name", "").casefold(),
                         keys.get("birthday", "")) == same:
                     raise Duplicate(row, members.name(row))
-        nr = members.highest_nr() + 1
+        nr = highest_nr(book, members) + 1
         row = members.last_row() + 1
         members.set(row, "nr", nr)
         for field, value in values.items():
@@ -92,6 +92,55 @@ def merge_members(items, base_rows, leave=(), exit_date=None, action="Import"):
         parts.append(update_member(nr, base_rows[nr], {"status": schema.LEFT, "exit_date": exit_date},
                                    action="Austritt"))
     return combine(*parts)
+
+
+# the highest nr ever given, in the member list or in the change log: the nr of a deleted member is not used again
+def highest_nr(book, members):
+    logged = 0
+    if schema.LOG_SHEET in book.sheetnames:
+        rows = sheet_rows(book[schema.LOG_SHEET], len(schema.LOG_HEADINGS))
+        column = heading_columns(rows[0] if rows else ()).get(normalize("Nr"))
+        if column:
+            logged = max((whole_number(row[column - 1]) or 0 for row in rows[1:]), default=0)
+    return max(members.highest_nr(), logged)
+
+
+# members are deleted for good (deletion period, or entered by mistake): people are (nr, name as shown), the name
+# has to fit still. Their functions go as well, and the change log keeps only "Nr … gelöscht" (no names, no values)
+def delete_members(people):
+    def change(book, members):
+        rows, numbers = [], {nr for nr, _ in people}
+        for nr, name in people:
+            found = members.rows_with(nr)
+            if len(found) != 1 or name_key(members.name(found[0])) != name_key(name):
+                raise SaveError("Mitglied " + str(nr) + " (" + name + ") wurde inzwischen in der Datei geändert. "
+                                "Bitte neu einlesen und noch einmal löschen.")
+            rows.append(found[0])
+        fresh, _ = read_functions(book, [(number, members.name(row)) for row, number in members.rows()])
+        function_rows = [function.row for function in fresh if function.nr in numbers]
+        anonymize_log(book, numbers)
+        for row in sorted(function_rows, reverse=True):
+            book[schema.FUNCTIONS_SHEET].delete_rows(row)
+        for row in sorted(rows, reverse=True):
+            members.sheet.delete_rows(row)
+        return [LogEntry(nr, "", "gelöscht", "", "", "") for nr, _ in people]
+    return change
+
+
+# earlier lines of the change log about these numbers keep only time, editor, nr, action and field
+def anonymize_log(book, numbers):
+    sheet = book[schema.LOG_SHEET]
+    rows = sheet_rows(sheet, len(schema.LOG_HEADINGS))
+    columns = heading_columns(rows[0] if rows else ())
+    nr_column = columns.get(normalize("Nr"))
+    personal = [columns.get(normalize(heading)) for heading in ("Mitglied", "alt", "neu")]
+    if nr_column is None:
+        return
+    for number, values in enumerate(rows[1:], start=2):
+        if whole_number(values[nr_column - 1]) in numbers:
+            for column in personal:
+                if column is not None:
+                    write_cell(sheet, number, column, None)
 
 
 # several changes in one save, e.g. the data of a member and its functions
@@ -133,7 +182,7 @@ class FunctionSheet:
                 value = None
             elif hasattr(value, "year"):
                 value = pd.Timestamp(value).date()
-            cell = self.sheet.cell(row=row, column=column, value=value)
+            cell = write_cell(self.sheet, row, column, value)
             if hasattr(value, "year"):
                 cell.number_format = "DD.MM.YYYY"
 
@@ -173,7 +222,7 @@ def update_functions(nr, base, functions):
 # rows added by hand without a nr get the next numbers; a nr that is not a number ("x") is left for a person to fix
 def assign_numbers():
     def change(book, members):
-        entries, nr = [], members.highest_nr()
+        entries, nr = [], highest_nr(book, members)
         for row, number in members.rows():
             if number is None and is_empty(members.get(row, "nr")):
                 nr += 1
@@ -249,7 +298,7 @@ def write_column(sheet, column, values, first_row=2):
         if index == column and row >= first_row:
             cell.value = None
     for row, value in enumerate(values, start=first_row):
-        sheet.cell(row=row, column=column, value=value)
+        write_cell(sheet, row, column, value)
 
 
 def write_occasions(sheet, columns, occasions):

@@ -13,8 +13,12 @@ def conflict_copies(path, file_id):
         return []
     folder, name = os.path.split(os.path.abspath(path))
     stem = os.path.splitext(name)[0]
+    try:
+        entries = sorted(os.listdir(folder))
+    except OSError:   # folder gone (e.g. usb stick removed, folder moved): nothing to offer
+        return []
     found = []
-    for entry in sorted(os.listdir(folder)):
+    for entry in entries:
         if entry == name or entry.startswith("~$") or not entry.lower().endswith(".xlsx") or not entry.startswith(stem):
             continue
         candidate = os.path.join(folder, entry)
