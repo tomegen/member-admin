@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import tempfile
@@ -11,7 +12,10 @@ import pandas as pd
 from PySide6.QtCore import QCoreApplication, QDate, QSettings
 from PySide6.QtWidgets import QApplication
 
+from openpyxl import load_workbook
+
 from config.config import Config
+from logic.template import write_member_template
 from ui.main_window import MainWindow, TAB_ISSUES
 
 app = QApplication.instance() or QApplication([])
@@ -180,7 +184,7 @@ class UiTest(unittest.TestCase):
         self.assertEqual(page.figures_table.item(0, 1).text(), "3")
         self.assertEqual(page.groups_table.rowCount(), 7)
         self.assertEqual(page.statistics.unknown_birthday, 1)
-        self.assertIn("1 aktive", page.note_label.text())
+        self.assertIn("1 Mitglieder", page.note_label.text())
         self.window.year_spin.setValue(2028)
         self.assertEqual(page.stichtag_edit.date(), QDate(2028, 12, 31))
 
@@ -199,6 +203,111 @@ class UiTest(unittest.TestCase):
         names = sorted(os.listdir(folder))
         self.assertEqual(len(names), 1 + self.window.tabs.count())
         self.assertEqual(names[:2], ["0_Start.png", "1_Ubersicht.png"])
+
+
+class StandardFileUiTest(unittest.TestCase):
+
+    def setUp(self):
+        QSettings().clear()
+        QSettings().setValue("editor_name", "Vorstand A")
+        self.config = Config()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.window = MainWindow(self.config)
+        self.addCleanup(self.window.close)
+        self.window.show_error = lambda title, text: self.errors.append(text)
+        self.errors = []
+        self.path = os.path.join(self.tmp.name, "Mitglieder.xlsx")
+        write_member_template(self.path, self.config)
+        book = load_workbook(self.path)
+        sheet, settings = book["Mitglieder"], book["Einstellungen"]
+        for row, values in enumerate([[1, "Muster", "Max", "männlich", datetime.date(1967, 6, 1),
+                                       datetime.date(2002, 5, 5), "aktiv"],
+                                      [2, "Beispiel", "Eva", "weiblich", datetime.date(1967, 3, 3),
+                                       datetime.date(2002, 3, 3), "passiv"]], start=2):
+            for column, value in enumerate(values, start=1):
+                sheet.cell(row=row, column=column, value=value)
+        for row in range(2, 40):
+            for letter in "ABCD":
+                settings[letter + str(row)] = None
+        for row, values in enumerate([("Geburtstag", 60, "Präsentkorb"), ("Jubiläum", 25, "Urkunde")], start=2):
+            for column, value in enumerate(values, start=1):
+                settings.cell(row=row, column=column, value=value)
+        settings["K2"], settings["K4"], settings["K5"] = "TSV Beispiel", 3, "nein"   # passive at birthdays: no
+        book.save(self.path)
+        self.window.year_spin.setValue(2027)
+        self.assertTrue(self.window.load_file(self.path))
+
+    def test_the_file_brings_numbers_gifts_reminder_and_club_name(self):
+        page = self.window.birthdays
+        self.assertEqual(page.spec.numbers, [60])
+        self.assertEqual(self.window.honors.spec.numbers, [25])
+        self.assertEqual(page.table.rowCount(), 1)                          # Eva is passive: not at birthdays
+        self.assertEqual(page.table.item(0, 2).text(), "Präsentkorb")
+        self.assertFalse(page.table.isColumnHidden(2))
+        self.assertEqual(self.window.honors.table.rowCount(), 2)           # but at honors
+        self.assertEqual(page.reminder_spin.value(), 3)
+        self.assertIn("TSV Beispiel", self.window.file_label.text())
+        self.assertIsNone(QSettings().value("reminder_days"))              # the reminder of the club is not stored here
+
+    def test_settings_dialog_saves_into_the_file(self):
+        from unittest import mock
+        from ui.club_settings_dialog import ClubSettingsDialog
+
+        def fill(dialog):
+            dialog.club_edit.setText("TSV Neu")
+            dialog.list_edits["Abteilungen"].setPlainText("Fußball\n\nTennis\nFußball")
+            dialog.passive_checks["Passive bei Geburtstagen"].setChecked(True)
+            dialog.accept()
+            return dialog.result()
+
+        with mock.patch.object(ClubSettingsDialog, "exec", fill):
+            self.window.open_settings()
+        self.assertEqual(self.errors, [])
+        settings = self.window.members.settings
+        self.assertEqual((settings.club_name, settings.lists["Abteilungen"]), ("TSV Neu", ["Fußball", "Tennis"]))
+        self.assertEqual(self.window.birthdays.table.rowCount(), 2)        # passive now count at birthdays
+        self.assertEqual([tuple(o)[:3] for o in settings.occasions], [("Geburtstag", 60, "Präsentkorb"),
+                                                                     ("Jubiläum", 25, "Urkunde")])
+        log = list(load_workbook(self.path)["Änderungsprotokoll"].iter_rows(min_row=2, values_only=True))
+        self.assertEqual([(row[1], row[5]) for row in log], [("Vorstand A", "Abteilungen"),
+                                                             ("Vorstand A", "Vereinsname"),
+                                                             ("Vorstand A", "Passive bei Geburtstagen")])
+
+    def test_settings_dialog_without_changes_does_not_touch_the_file(self):
+        from unittest import mock
+        from ui.club_settings_dialog import ClubSettingsDialog
+        before = os.path.getmtime(self.path)
+        with mock.patch.object(ClubSettingsDialog, "exec", lambda dialog: dialog.accept() or dialog.result()):
+            self.window.open_settings()
+        self.assertEqual(os.path.getmtime(self.path), before)
+        self.assertFalse(os.path.isdir(os.path.join(self.tmp.name, "Sicherungen")))
+
+    def test_dialog_keeps_defaults_and_refuses_twins(self):
+        from model.club_settings import ClubSettings
+        from ui.club_settings_dialog import ClubSettingsDialog
+        unchanged = ClubSettingsDialog(ClubSettings(), [60, 70], [25], "A", self.window)
+        self.assertEqual(unchanged.occasion_table.rowCount(), 3)           # the defaults are shown ...
+        unchanged.accept()
+        self.assertEqual(unchanged.settings.occasions, [])                 # ... but not written into the file
+        twins = ClubSettingsDialog(ClubSettings(), [60, 70], [25], "A", self.window)
+        twins.occasion_table.cellWidget(1, 1).setValue(60)
+        twins.accept()
+        self.assertIn("Geburtstag 60 steht doppelt", twins.error_label.text())
+
+    def test_open_file_asks_before_saving_anyway(self):
+        from store.changes import update_settings
+        with open(os.path.join(self.tmp.name, "~$Mitglieder.xlsx"), "wb") as file:
+            file.write(bytes([4]) + b"Eva " + b" " * 40)
+        settings = self.window.members.settings
+        new = type(settings)(settings.occasions, settings.lists, dict(settings.general, Vereinsname="X"))
+        questions = []
+        self.window.ask = lambda title, text: questions.append(text) or False
+        self.assertFalse(self.window.save_change(update_settings(settings, new)))
+        self.assertIn("(von Eva)", questions[0])
+        self.window.ask = lambda title, text: True
+        self.assertTrue(self.window.save_change(update_settings(settings, new)))
+        self.assertEqual(self.window.members.settings.club_name, "X")
 
 
 if __name__ == "__main__":

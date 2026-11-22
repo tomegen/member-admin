@@ -66,14 +66,15 @@ def replace_file(path, data):
             os.fsync(file.fileno())
         os.replace(temporary, path)
     except PermissionError:
-        raise FileLocked("")   # windows: the file is open in excel
+        raise FileLocked(None)   # windows: the file is open in excel, saving anyway is not possible
     finally:
         if os.path.exists(temporary):
             os.remove(temporary)
 
 
 # one change as a transaction: read the file as it is now, apply change(book, members) to it, repair, write the
-# change log, keep a backup, replace the file and check it. If the file changes while this runs, it starts again
+# change log, keep a backup, replace the file and check it. If the file changes while this runs, it starts again.
+# A change without log entries changed nothing: then nothing is written
 def save(path, change, editor, now=None, ignore_lock=False):
     now = now or datetime.now().replace(microsecond=0)
     if not ignore_lock:
@@ -91,6 +92,8 @@ def save(path, change, editor, now=None, ignore_lock=False):
                             ". Bitte die Überschriften in Excel korrigieren, dann neu einlesen.")
         repair(book, members)
         entries = change(book, members)
+        if not entries:
+            return Saved(file_hash(data), [], None)   # nothing changed: the shared file is not touched
         append_log(book, entries, editor, now)
         new = to_bytes(book)
         if read_bytes(path) != data:

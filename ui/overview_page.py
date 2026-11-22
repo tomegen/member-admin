@@ -78,12 +78,13 @@ class OverviewPage(QWidget):
                                        "Mitglied = 0 oder leer") + " – zählen nicht für Geburtstage und Ehrungen")
         self.issues_card[1].setText(str(len(members.issues)))
         if active_issues:
-            self.issues_card[2].setText(str(active_issues) + " davon bei aktiven Mitgliedern – siehe Tab „Datenprüfung“")
+            self.issues_card[2].setText(str(active_issues) + " davon bei Mitgliedern – siehe Tab „Datenprüfung“")
         else:
-            self.issues_card[2].setText("Keine Auffälligkeiten bei aktiven Mitgliedern")
+            self.issues_card[2].setText("Keine Auffälligkeiten bei Mitgliedern")
 
         today = pd.Timestamp.now() if today is None else pd.Timestamp(today)
-        rows = find_upcoming(members.members, birthdays, honors, today, UPCOMING_DAYS)
+        rows = find_upcoming(members.counted("birthdays"), members.counted("honors"), birthdays, honors, today,
+                             UPCOMING_DAYS)
         self.upcoming_table.setRowCount(len(rows))
         for row, (date, occasion, name) in enumerate(rows):
             for column, text in enumerate((date.strftime("%d.%m.%Y"), occasion, name)):

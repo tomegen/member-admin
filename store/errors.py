@@ -9,6 +9,7 @@ class SaveError(Exception):
     pass
 
 
+# owner: name from the lock file ("" = unknown); None = the system refused to write (no lock file to ignore)
 class FileLocked(SaveError):
 
     def __init__(self, owner):

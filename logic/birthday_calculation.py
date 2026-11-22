@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from logic.calendar_export import write_entries_into_ics
+from logic.calendar_export import with_gift, write_entries_into_ics
 from logic.date_utils import shift_years
 from model.entry import Entry
 
@@ -13,23 +13,25 @@ def find_birthdays(members, birthdays, from_date, to_date):
             if is_birthday(member, birthday, from_date, to_date)]
 
 
-# function to write all the birthdays into an ics file (all-day events)
-def write_birthdays_into_ics(members, birthdays, from_date, to_date, ics_filename, reminder_days=0):
+# function to write all the birthdays into an ics file (all-day events); gifts = {number: gift} of the club
+def write_birthdays_into_ics(members, birthdays, from_date, to_date, ics_filename, reminder_days=0, gifts=None):
     return write_entries_into_ics(
         find_birthdays(members, birthdays, from_date, to_date),
         summary=lambda entry: str(entry.number) + ". Geburtstag " + entry.member.full_name(),
-        description=lambda entry: str(entry.number) + '. Geburtstag von ' + entry.member.full_name(),
+        description=lambda entry: with_gift(str(entry.number) + '. Geburtstag von ' + entry.member.full_name(),
+                                            gifts, entry.number),
         ics_filename=ics_filename, reminder_days=reminder_days)
 
 
-# function to write all the birthdays into a txt file; minimal = only name and date, no personal details
-def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filename, minimal=False):
+# function to write all the birthdays into a txt file; minimal = only name and date, no personal details (and no gift)
+def write_birthdays_into_txt(members, birthdays, from_date, to_date, txt_filename, minimal=False, gifts=None):
     text = "Geburtstage vom " + str(from_date.strftime('%d.%m.%Y')) + " bis zum " + str(to_date.strftime('%d.%m.%Y'))
     text += os.linesep *2
 
     entries = find_birthdays(members, birthdays, from_date, to_date)
     for birthday in birthdays:
-        text += str(birthday) + ". Geburtstag: "
+        gift = None if minimal else (gifts or {}).get(birthday)
+        text += str(birthday) + ". Geburtstag" + (" – Geschenk/Maßnahme: " + gift if gift else "") + ": "
         text += os.linesep
         for entry in entries:
             if entry.number == birthday:

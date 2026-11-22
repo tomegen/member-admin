@@ -16,7 +16,8 @@ from logic.template import write_member_template
 from model.club_file import read_bytes
 from model.members import Members
 from store import backups
-from store.changes import add_member, assign_numbers, update_member
+from model.club_settings import ClubSettings, Occasion
+from store.changes import add_member, assign_numbers, update_member, update_settings
 from store.errors import Conflict, Duplicate, FileLocked, SaveError
 from store.transaction import lock_owner, save
 
@@ -100,11 +101,14 @@ class UpdateTest(StoreTest):
         save(self.path, update_member(1, conflict.theirs, {"ort": "Musterstadt"}), "A", now=NOW)
         self.assertEqual(self.member(1).ort, "Musterstadt")
 
-    def test_same_value_from_both_is_no_conflict(self):
+    def test_same_value_from_both_is_no_conflict_and_nothing_is_written(self):
         snapshot = self.read().snapshot
         self.edit_in_excel(lambda sheet: sheet.cell(row=2, column=14, value="Musterstadt"))
+        before = read_bytes(self.path)
         saved = save(self.path, update_member(1, snapshot.rows[1], {"ort": "Musterstadt"}), "A", now=NOW)
-        self.assertEqual(saved.entries, [])
+        self.assertEqual((saved.entries, saved.backup), ([], None))
+        self.assertEqual(read_bytes(self.path), before)
+        self.assertFalse(os.path.isdir(backups.backup_folder(self.path)))
 
     def test_unchanged_values_from_the_dialog_do_not_overwrite_the_file(self):
         snapshot = self.read().snapshot
@@ -279,6 +283,100 @@ class RepairTest(StoreTest):
         for town in ("A", "B", "C"):
             save(self.path, update_member(1, self.read().snapshot.rows[1], {"ort": town}), "A", now=NOW)
         self.assertLess(os.path.getsize(self.path), size * 1.2)
+
+
+class SettingsTest(StoreTest):
+
+    def edit_settings(self, cells):
+        self.edit_in_excel(lambda book: [book["Einstellungen"].__setitem__(coordinate, value)
+                                         for coordinate, value in cells.items()], whole_book=True)
+
+    def clear_occasions(self):
+        def clear(book):
+            sheet = book["Einstellungen"]
+            for row in range(2, 60):
+                for letter in "ABCD":
+                    sheet[letter + str(row)] = None
+        self.edit_in_excel(clear, whole_book=True)
+
+    def test_template_has_the_defaults(self):
+        settings = self.read().settings
+        self.assertEqual(settings.numbers("Geburtstag", []), self.config.birthday_config)
+        self.assertEqual(settings.numbers("Jubiläum", []), self.config.honor_config)
+        self.assertEqual((settings.club_name, settings.delete_after, settings.reminder_days), ("", None, 7))
+        self.assertTrue(settings.passive("birthdays"))
+        self.assertEqual(settings.lists["Abteilungen"], [])
+
+    def test_occasions_gifts_and_lists_written_by_hand(self):
+        self.clear_occasions()
+        self.edit_settings({"A2": "Geburtstag", "B2": 70, "C2": "Präsentkorb", "A3": "geburtstag", "B3": "60",
+                            "A4": "Jubiläum", "B4": "keine", "A5": "Feier", "B5": 5, "A6": "Geburtstag", "B6": "x",
+                            "F2": "Fußball", "F4": "Tennis", "F5": "Fußball"})
+        members = self.read()
+        settings = members.settings
+        self.assertEqual(settings.numbers("Geburtstag", [1]), [60, 70])
+        self.assertEqual(settings.numbers("Jubiläum", [1]), [])
+        self.assertEqual(settings.gifts("Geburtstag"), {70: "Präsentkorb"})
+        self.assertEqual(settings.lists["Abteilungen"], ["Fußball", "Tennis"])
+        self.assertEqual([(i.row, i.name) for i in members.issues],
+                         [(5, "Blatt „Einstellungen“"), (6, "Blatt „Einstellungen“")])
+
+    def test_passive_members_count_as_the_club_wants(self):
+        self.edit_settings({"K5": "nein", "K4": "x"})                        # passive at birthdays: no
+        members = self.read()
+        self.assertEqual([m.first_name for m in members.counted("birthdays")], ["Max"])
+        self.assertEqual([m.first_name for m in members.counted("honors")], ["Max", "Eva"])
+        self.assertEqual(members.settings.reminder_days, 7)                   # "x" is not a number: default
+        self.assertIn("Erinnerung (Tage vorher)", members.issues[0].message)
+        self.edit_settings({"K4": 0})
+        self.assertEqual((self.read().settings.reminder_days, self.read().issues), (0, []))
+
+    def test_settings_are_saved_area_by_area(self):
+        self.edit_settings({"D2": "Notiz bleibt"})          # note of the first occasion (Geburtstag 16)
+        base = self.read().settings
+        new = ClubSettings([Occasion("Jubiläum", 25, "Urkunde", ""), Occasion("Geburtstag", 16, "", ""),
+                            Occasion("Geburtstag", 60, "Präsentkorb", "")],
+                           {"Abteilungen": ["Fußball", "Tennis"]},
+                           {"Vereinsname": "TSV Beispiel", "Passive bei Ehrungen": False})
+        self.edit_settings({"G2": "Erwachsene"})            # somebody adds a fee class meanwhile
+        saved = save(self.path, update_settings(base, new), "Vorstand A", now=NOW)
+        settings = self.read().settings
+        self.assertEqual([tuple(o) for o in settings.occasions],
+                         [("Geburtstag", 16, "", "Notiz bleibt"), ("Geburtstag", 60, "Präsentkorb", ""),
+                          ("Jubiläum", 25, "Urkunde", "")])
+        self.assertEqual((settings.lists["Abteilungen"], settings.lists["Beitragsklassen"]),
+                         (["Fußball", "Tennis"], ["Erwachsene"]))
+        self.assertEqual((settings.club_name, settings.passive("honors"), settings.reminder_days),
+                         ("TSV Beispiel", False, 7))
+        self.assertEqual([entry.field for entry in saved.entries],
+                         ["Anlässe", "Abteilungen", "Vereinsname", "Passive bei Ehrungen"])
+        self.assertEqual(self.log()[-1][3:], ("Einstellungen", "Passive bei Ehrungen", "ja", "nein"))
+        self.assertEqual(self.log()[0][4:], ("Anlässe", "Geburtstag 18, Geburtstag 20, Geburtstag 30, Geburtstag "
+                                             "40, Geburtstag 50, Geburtstag 60, Geburtstag 65, Geburtstag 70, Geburtstag "
+                                             "75, Geburtstag 80, Geburtstag 85, Geburtstag 90, Geburtstag 95, Geburtstag "
+                                             "100, Geburtstag 105, Geburtstag 110, Jubiläum 15, Jubiläum 20, Jubiläum 25, "
+                                             "Jubiläum 30, Jubiläum 35, Jubiläum 40, Jubiläum 45, Jubiläum 50, Jubiläum 55, "
+                                             "Jubiläum 60, Jubiläum 65, Jubiläum 70, Jubiläum 75",
+                                             "Geburtstag 60 Präsentkorb, Jubiläum 25 Urkunde"))
+        self.assertEqual(self.log()[1][4:], ("Abteilungen", None, "Fußball, Tennis"))
+        self.assertEqual(load_workbook(self.path)["Einstellungen"]["K6"].value, "nein")
+        self.assertEqual(len(load_workbook(self.path)["Einstellungen"].data_validations.dataValidation), 2)
+
+    def test_same_area_changed_by_both_is_refused(self):
+        base = self.read().settings
+        self.edit_settings({"F2": "Handball"})
+        new = ClubSettings(base.occasions, {"Abteilungen": ["Fußball"]}, base.general)
+        with self.assertRaises(SaveError) as error:
+            save(self.path, update_settings(base, new), "A", now=NOW)
+        self.assertIn("Abteilungen", str(error.exception))
+        self.assertEqual(self.read().settings.lists["Abteilungen"], ["Handball"])
+
+    def test_missing_general_key_is_added(self):
+        self.edit_settings({"J2": None, "K2": None})       # Vereinsname deleted by hand
+        base = self.read().settings
+        new = ClubSettings(base.occasions, base.lists, dict(base.general, Vereinsname="TSV Beispiel"))
+        save(self.path, update_settings(base, new), "A", now=NOW)
+        self.assertEqual(self.read().settings.club_name, "TSV Beispiel")
 
 
 class BackupTest(unittest.TestCase):

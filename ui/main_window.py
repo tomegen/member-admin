@@ -1,9 +1,10 @@
+import getpass
 import os
 
 import pandas as pd
 from PySide6.QtCore import QSettings, QStandardPaths, Qt
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QSpinBox,
+from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QInputDialog, QLabel, QMainWindow, QMessageBox, QSpinBox,
                                QStackedWidget, QTabWidget, QVBoxLayout, QWidget)
 
 from config.config import parse_numbers
@@ -12,6 +13,11 @@ from logic.honor_calculation import find_honors, write_honors_into_ics, write_ho
 from logic.template import write_member_template
 from logic.upcoming import birthday_occasion, honor_occasion
 from model.members import MemberListError, Members
+from model.schema import BIRTHDAY, HONOR
+from store.changes import update_settings
+from store.errors import FileLocked, SaveError
+from store.transaction import save
+from ui.club_settings_dialog import ClubSettingsDialog
 from ui.issues_page import IssuesPage
 from ui.overview_page import OverviewPage
 from ui.result_page import ResultPage, ResultSpec
@@ -104,7 +110,8 @@ class MainWindow(QMainWindow):
             file_stem="Geburtstage",
             finder=find_birthdays,
             txt_writer=write_birthdays_into_txt,
-            ics_writer=write_birthdays_into_ics))
+            ics_writer=write_birthdays_into_ics,
+            purpose="birthdays"))
         self.honors = ResultPage(ResultSpec(
             title="Ehrungen",
             description="Mitglieder mit rundem Jubiläum im gewählten Zeitraum. Welche Jahre zur Auswahl "
@@ -115,7 +122,8 @@ class MainWindow(QMainWindow):
             file_stem="Ehrungen",
             finder=find_honors,
             txt_writer=write_honors_into_txt,
-            ics_writer=write_honors_into_ics))
+            ics_writer=write_honors_into_ics,
+            purpose="honors"))
         self.statistics_page = StatisticsPage()
         self.issues = IssuesPage()
 
@@ -165,8 +173,10 @@ class MainWindow(QMainWindow):
         self.members = members
         self.filename = path
         QSettings().setValue("last_file", path)
-        self.file_label.setText(os.path.basename(path))
+        club = members.settings.club_name
+        self.file_label.setText((club + " – " if club else "") + os.path.basename(path))
         self.setWindowTitle("Mitglieder Management Portal – " + os.path.basename(path))
+        self.apply_club_settings(members)
         self.birthdays.set_members(members)
         self.honors.set_members(members)
         self.statistics_page.set_members(members)
@@ -189,8 +199,68 @@ class MainWindow(QMainWindow):
 
     def refresh_overview(self):
         if self.members is not None:
-            self.overview.refresh(self.members, self.year_spin.value(), self.config.birthday_config,
-                                  self.config.honor_config)
+            self.overview.refresh(self.members, self.year_spin.value(), self.birthdays.spec.numbers,
+                                  self.honors.spec.numbers)
+
+    # a standard file brings the settings of its club (numbers, gifts, reminder); an old list uses the numbers
+    # chosen on this computer
+    def apply_club_settings(self, members):
+        settings = members.settings
+        if members.standard:
+            self.birthdays.set_numbers(settings.numbers(BIRTHDAY, self.default_birthdays))
+            self.honors.set_numbers(settings.numbers(HONOR, self.default_honors))
+            self.birthdays.set_reminder(settings.reminder_days)
+            self.honors.set_reminder(settings.reminder_days)
+        else:
+            self.birthdays.set_numbers(self.config.birthday_config)
+            self.honors.set_numbers(self.config.honor_config)
+        self.birthdays.set_gifts(settings.gifts(BIRTHDAY))
+        self.honors.set_gifts(settings.gifts(HONOR))
+
+    # --- saving into the standard file ---------------------------------------------------------------------------
+
+    # name for the change log, asked once on this computer; None if the user cancels
+    def editor_name(self):
+        name = QSettings().value("editor_name")
+        if not name:
+            name = self.ask_editor_name(getpass.getuser())
+            if name:
+                QSettings().setValue("editor_name", name)
+        return name or None
+
+    def ask_editor_name(self, suggestion):
+        name, ok = QInputDialog.getText(self, "Ihr Name", "Ihr Name für das Änderungsprotokoll der Mitgliederliste "
+                                        "(wird nur auf diesem Computer gespeichert):", text=suggestion)
+        return name.strip() if ok else None
+
+    def ask(self, title, text):
+        return QMessageBox.question(self, title, text) == QMessageBox.StandardButton.Yes
+
+    # saves a change (store.changes) into the open standard file and reads it again; False if nothing was saved
+    def save_change(self, change):
+        editor = self.editor_name()
+        if editor is None:
+            return False
+        ignore_lock = False
+        while True:
+            try:
+                save(self.filename, change, editor, ignore_lock=ignore_lock)
+                break
+            except FileLocked as error:
+                if ignore_lock or error.owner is None:   # windows keeps the file locked: no way to save anyway
+                    self.show_error("Speichern nicht möglich", str(error))
+                    return False
+                if not self.ask("Datei ist geöffnet", str(error) + "\n\nWenn die Datei sicher nirgends mehr geöffnet "
+                                "ist (z. B. nach einem Absturz von Excel), können Sie trotzdem speichern. Wird sie doch "
+                                "noch in Excel bearbeitet, überschreibt das spätere Speichern in Excel Ihre Änderung."
+                                "\n\nTrotzdem speichern?"):
+                    return False
+                ignore_lock = True
+            except (SaveError, OSError) as error:
+                self.show_error("Speichern nicht möglich", str(error))
+                return False
+        self.load_file(self.filename)
+        return True
 
     # --- settings and template ---------------------------------------------------------------------------------
 
@@ -205,11 +275,24 @@ class MainWindow(QMainWindow):
                     settings.remove(key)
 
     def open_settings(self):
+        if self.members is not None and self.members.standard:
+            self.open_club_settings()
+            return
         dialog = SettingsDialog(self.config.birthday_config, self.config.honor_config, self.default_birthdays,
                                 self.default_honors, self)
         if not dialog.exec():
             return
         self.set_numbers(dialog.birthdays, dialog.honors)
+
+    # the settings of a standard file are saved in the file itself
+    def open_club_settings(self):
+        dialog = ClubSettingsDialog(self.members.settings, self.default_birthdays, self.default_honors,
+                                    QSettings().value("editor_name") or getpass.getuser(), self)
+        if not dialog.exec():
+            return
+        QSettings().setValue("editor_name", dialog.editor_name)
+        if dialog.settings.areas() != self.members.settings.areas():
+            self.save_change(update_settings(self.members.settings, dialog.settings))
 
     # remember the selectable numbers (nothing is stored when they are the defaults) and show them
     def set_numbers(self, birthdays, honors):

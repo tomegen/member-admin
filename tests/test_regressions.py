@@ -311,15 +311,16 @@ class UpcomingTest(unittest.TestCase):
         january = make_member("1967-01-10", first_name="Jan")        # 60th on 10.01.2027
         december = make_member("1957-12-24", first_name="Dez", member_since="2001-12-30")  # 70th on 24.12.2027
         far = make_member("1967-03-01", first_name="Fern")
-        found = find_upcoming([january, december, far], [60, 70], [25], pd.Timestamp("2026-12-20 15:30"))
+        members = [january, december, far]
+        found = find_upcoming(members, members, [60, 70], [25], pd.Timestamp("2026-12-20 15:30"))
         self.assertEqual([(d.strftime("%d.%m.%Y"), o) for d, o, _ in found],
                          [("30.12.2026", "25 Jahre Mitgliedschaft"), ("10.01.2027", "60. Geburtstag")])
 
     def test_window_includes_today_and_the_last_day(self):
         member = make_member("1967-06-01")
-        self.assertEqual(len(find_upcoming([member], [60], [], pd.Timestamp("2027-06-01"))), 1)
-        self.assertEqual(len(find_upcoming([member], [60], [], pd.Timestamp("2027-05-02"))), 1)
-        self.assertEqual(len(find_upcoming([member], [60], [], pd.Timestamp("2027-05-01"))), 0)
+        self.assertEqual(len(find_upcoming([member], [], [60], [], pd.Timestamp("2027-06-01"))), 1)
+        self.assertEqual(len(find_upcoming([member], [], [60], [], pd.Timestamp("2027-05-02"))), 1)
+        self.assertEqual(len(find_upcoming([member], [], [60], [], pd.Timestamp("2027-05-01"))), 0)
 
 
 class ColumnsTest(unittest.TestCase):
@@ -466,6 +467,46 @@ class StatisticsTest(unittest.TestCase):
             path = os.path.join(tmp, "stats.xlsx")
             write_statistics_into_xlsx(stats, path)
             self.assertEqual(list(pd.read_excel(path, sheet_name=None)), ["Kennzahlen", "Altersgruppen"])
+
+
+class GiftTest(unittest.TestCase):
+    GIFTS = {60: "Präsentkorb"}
+
+    def test_xlsx_has_the_gift_after_the_date_but_not_when_minimal(self):
+        entries = find_birthdays([make_member("1967-06-01"), make_member("1957-03-01")], [60, 70],
+                                 JAN_1_2027, DEC_31_2027)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "result.xlsx")
+            write_entries_into_xlsx(entries, lambda n: str(n) + ". Geburtstag", path, gifts=self.GIFTS)
+            table = pd.read_excel(path)
+            write_entries_into_xlsx(entries, lambda n: str(n) + ". Geburtstag", path, minimal=True, gifts=self.GIFTS)
+            minimal = pd.read_excel(path)
+        self.assertEqual(list(table.columns)[:4], ["Anlass", "Datum", "Geschenk/Maßnahme", "Vorname"])
+        self.assertEqual(list(table["Geschenk/Maßnahme"].fillna("")), ["", "Präsentkorb"])     # sorted by date: 70th first
+        self.assertNotIn("Geschenk/Maßnahme", minimal.columns)
+
+    def test_txt_and_calendar_name_the_gift(self):
+        member = make_member("1967-06-01")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "birthdays.txt")
+            write_birthdays_into_txt([member], [60], JAN_1_2027, DEC_31_2027, path, gifts=self.GIFTS)
+            with open(path, encoding="utf-8") as file:
+                content = file.read()
+            write_birthdays_into_txt([member], [60], JAN_1_2027, DEC_31_2027, path, minimal=True, gifts=self.GIFTS)
+            with open(path, encoding="utf-8") as file:
+                minimal = file.read()
+            path = os.path.join(tmp, "birthdays.ics")
+            write_birthdays_into_ics([member], [60], JAN_1_2027, DEC_31_2027, path, gifts=self.GIFTS)
+            with open(path, "rb") as file:
+                calendar = file.read().replace(b"\r\n ", b"").decode("utf-8")
+        self.assertIn("60. Geburtstag – Geschenk/Maßnahme: Präsentkorb:", content)
+        self.assertNotIn("Präsentkorb", minimal)
+        self.assertIn("Geschenk/Maßnahme: Präsentkorb", calendar)
+
+    def test_statistics_show_the_passive_members(self):
+        members = [make_member("1980-01-01"), make_member("1981-01-01", status=schema.PASSIVE)]
+        stats = Statistics(members, 2027, pd.Timestamp("2027-12-31"))
+        self.assertEqual(stats.rows()[:2], [("Mitglieder", 2), ("davon passiv", 1)])
 
 
 class TemplateTest(unittest.TestCase):

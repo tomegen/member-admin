@@ -1,6 +1,7 @@
 import pandas as pd
 
 from model.checks import age_on
+from model.schema import PASSIVE
 
 # age groups as the sport associations ask for them (Bestandserhebung): (from, to); to = None is open ended
 AGE_GROUPS = [(0, 6), (7, 14), (15, 18), (19, 26), (27, 40), (41, 60), (61, None)]
@@ -14,7 +15,7 @@ def age_group_label(low, high):
     return str(low) + " bis " + str(high) + " Jahre"
 
 
-# numbers of the active members on the given day: counts per age group, average age and membership duration
+# numbers of the counted members (active, passive if the club counts them) on the given day: counts per age group, average age and membership duration
 class Statistics:
 
     def __init__(self, members, year, stichtag, groups=AGE_GROUPS):
@@ -22,6 +23,7 @@ class Statistics:
         self.year = year
         self.stichtag = stichtag
         self.active = len(active)
+        self.passive = sum(1 for member in active if member.status == PASSIVE)
         self.new_members = sum(1 for member in active
                                if not pd.isna(member.member_since) and member.member_since.year == year)
 
@@ -38,7 +40,8 @@ class Statistics:
         self.average_membership_years = sum(years) / len(years) if years else None
 
     def rows(self):
-        return [("Aktive Mitglieder", self.active),
+        return [("Mitglieder", self.active),
+                ("davon passiv", self.passive),
                 ("Neue Mitglieder " + str(self.year), self.new_members),
                 ("Durchschnittsalter am Stichtag", self.average_age),
                 ("Durchschnittliche Mitgliedsdauer in Jahren", self.average_membership_years),

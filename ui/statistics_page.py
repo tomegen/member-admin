@@ -26,7 +26,7 @@ def make_table(columns):
     return table
 
 
-# numbers for the general meeting or the report to the association (active members only)
+# numbers for the general meeting or the report to the association (members that count, see Members.counted)
 class StatisticsPage(QWidget):
 
     def __init__(self):
@@ -39,9 +39,9 @@ class StatisticsPage(QWidget):
         layout.setContentsMargins(30, 24, 30, 24)
         layout.setSpacing(12)
         layout.addWidget(heading("Statistik"))
-        layout.addWidget(muted("Zahlen zu den aktiven Mitgliedern, z. B. für die Mitgliederversammlung oder die "
-                               "Meldung an den Verband. Austritte lassen sich nicht auswerten, weil die Liste "
-                               "kein Austrittsdatum enthält."))
+        layout.addWidget(muted("Zahlen zu den Mitgliedern, z. B. für die Mitgliederversammlung oder die Meldung an "
+                               "den Verband. Ausgetretene zählen nicht; ob passive Mitglieder zählen, legen Sie "
+                               "unter „Einstellungen“ fest."))
 
         row = QHBoxLayout()
         row.addWidget(QLabel("Stichtag für das Alter:"))
@@ -84,7 +84,7 @@ class StatisticsPage(QWidget):
     def refresh(self):
         if self.members is None:
             return
-        self.statistics = Statistics(self.members.members, self.year, self.stichtag())
+        self.statistics = Statistics(self.members.counted("statistics"), self.year, self.stichtag())
         rows = self.statistics.rows()
         self.figures_table.setRowCount(len(rows))
         for index, (name, value) in enumerate(rows):
@@ -103,7 +103,7 @@ class StatisticsPage(QWidget):
                 self.groups_table.setItem(index, column, item)
 
         left_out = self.statistics.unknown_birthday + self.statistics.outside_groups
-        self.note_label.setText(str(left_out) + " aktive Mitglieder sind in den Altersgruppen nicht enthalten "
+        self.note_label.setText(str(left_out) + " Mitglieder sind in den Altersgruppen nicht enthalten "
                                 "(Geburtstag fehlt oder unplausibel, siehe Datenprüfung)." if left_out else "")
 
     def save(self):

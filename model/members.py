@@ -1,10 +1,11 @@
 import pandas as pd
 from model import club_file
 from model.checks import plausibility_issues
+from model.club_settings import ClubSettings, read_settings
 from model.columns import detect_columns, missing_mandatory
 from model.issue import Issue  # noqa: F401 (also imported from here)
 from model.member import Member
-from model.schema import ACTIVE, LEFT
+from model.schema import ACTIVE, LEFT, PASSIVE
 from model.values import parse_date, to_text  # noqa: F401 (also imported from here)
 
 READ_ERROR = ("Die Datei konnte nicht gelesen werden.\n\nIst es eine Excel-Datei (.xlsx oder .xls) "
@@ -34,6 +35,7 @@ class Members:
         self.issues = []
         self.filename = filename
         self.snapshot = None   # only for the standard file, which the app can change
+        self.settings = ClubSettings()   # an old list has no settings sheet: defaults
         try:
             data = club_file.read_bytes(filename)
         except OSError as e:
@@ -56,9 +58,17 @@ class Members:
             rows, issues, keys = club_file.read_members(book, today)
         except club_file.MissingColumns as e:
             raise missing_columns_error(e.missing, e.found)
-        self.issues += issues
+        self.settings, setting_issues = read_settings(book)
+        self.issues += issues + setting_issues
         self.snapshot = club_file.Snapshot(club_file.file_hash(data), keys)
         return rows
+
+    # members that count for "birthdays", "honors" or "statistics": the active ones, the passive ones if the
+    # settings of the club say so
+    def counted(self, purpose):
+        passive = self.settings.passive(purpose)
+        return [member for member in self.members
+                if member.status == ACTIVE or (passive and member.status == PASSIVE)]
 
     # an old list: first sheet, heading in row 1, "Mitglied" is 1 or 0
     def read_old_list(self, config):

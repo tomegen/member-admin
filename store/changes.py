@@ -3,7 +3,8 @@ from collections import namedtuple
 import pandas as pd
 
 from model import schema
-from model.club_file import cell_key
+from model.club_file import cell_key, sheet_rows
+from model.club_settings import SETTINGS_COLUMNS, general_text, read_settings, settings_columns
 from model.columns import normalize
 from store.sheet import COLUMNS_BY_FIELD, COLUMNS_BY_HEADING, cell_value, is_empty, last_used_row
 from store.errors import Conflict, Duplicate, FieldConflict, SaveError
@@ -84,6 +85,97 @@ def assign_numbers():
                 entries.append(LogEntry(nr, members.name(row), "Nummer vergeben", "Nr", "", str(nr)))
         return entries
     return change
+
+
+# text of a settings area for the change log: "Geburtstag 60 Präsentkorb, Jubiläum 25", "Fußball, Tennis", "ja"
+def area_text(label, value):
+    if not isinstance(value, tuple):
+        return str(general_text(label, value))
+    parts = []
+    for item in value:
+        words = item if isinstance(item, tuple) else (item,)
+        parts.append(" ".join("keine" if word == -1 else str(word) for word in words if word != ""))
+    return ", ".join(parts)
+
+
+# the settings dialog saved new settings; base are the settings when the file was read. An area (occasions, a list,
+# a general setting) that somebody else changed in the meantime is kept; if both changed it, SaveError
+def update_settings(base, new):
+    def change(book, members):
+        fresh, _ = read_settings(book)
+        before, wanted, now = base.areas(), new.areas(), fresh.areas()
+        changed = [label for label in wanted if wanted[label] != before[label]]
+        conflicts = [label for label in changed if now[label] not in (before[label], wanted[label])]
+        if conflicts:
+            raise SaveError("Diese Einstellungen wurden inzwischen von jemand anderem geändert: " +
+                            ", ".join(conflicts) + ". Bitte neu einlesen und die Änderung wiederholen.")
+        sheet = book[schema.SETTINGS_SHEET]
+        rows = sheet_rows(sheet, SETTINGS_COLUMNS)
+        columns = settings_columns(rows[0] if rows else ())
+        entries = []
+        for label in changed:
+            if now[label] == wanted[label]:
+                continue
+            if label == "Anlässe":
+                notes = {(o.kind, o.years): o.note for o in fresh.occasions}
+                write_occasions(sheet, columns, [o._replace(note=notes.get((o.kind, o.years), ""))
+                                                 for o in new.occasions])
+            elif label in new.lists:
+                write_column(sheet, column_of(columns, label), new.lists[label])
+            else:
+                write_general(sheet, columns, label, new.general[label])
+            entries.append(LogEntry(None, "", "Einstellungen", label, *log_difference(label, now[label], wanted[label])))
+        return entries
+    return change
+
+
+# old and new text for the change log; of occasions and lists only what was removed and added
+def log_difference(label, old, new):
+    if not isinstance(old, tuple):
+        return area_text(label, old), area_text(label, new)
+    removed, added = tuple(item for item in old if item not in new), tuple(item for item in new if item not in old)
+    if not removed and not added:
+        return "", "(Reihenfolge geändert)"
+    return area_text(label, removed), area_text(label, added)
+
+
+def column_of(columns, heading):
+    index = columns.get(normalize(heading))
+    if index is None:
+        raise SaveError("Im Blatt „Einstellungen“ fehlt die Überschrift „" + heading + "“. Bitte in Excel "
+                        "ergänzen, dann neu einlesen.")
+    return index
+
+
+# replaces the values of a column below the heading; existing cells keep their format and dropdown
+def write_column(sheet, column, values, first_row=2):
+    for (row, index), cell in list(sheet._cells.items()):
+        if index == column and row >= first_row:
+            cell.value = None
+    for row, value in enumerate(values, start=first_row):
+        sheet.cell(row=row, column=column, value=value)
+
+
+def write_occasions(sheet, columns, occasions):
+    order = sorted(occasions, key=lambda o: (o.kind != schema.BIRTHDAY, -1 if o.years is None else o.years))
+    for heading, values in zip(schema.OCCASION_HEADINGS,
+                               ([o.kind for o in order], ["keine" if o.years is None else o.years for o in order],
+                                [o.gift or None for o in order], [o.note or None for o in order])):
+        write_column(sheet, column_of(columns, heading), values)
+
+
+def write_general(sheet, columns, key, value):
+    key_column = column_of(columns, schema.GENERAL_HEADINGS[0])
+    value_column = column_of(columns, schema.GENERAL_HEADINGS[1])
+    rows = [row for (row, index), cell in sheet._cells.items()
+            if index == key_column and row > 1 and normalize(cell_key(cell.value)) == normalize(key)]
+    if rows:
+        row = min(rows)
+    else:
+        row = max([r for (r, index), cell in sheet._cells.items() if index == key_column and cell_key(cell.value)],
+                  default=1) + 1
+        sheet.cell(row=row, column=key_column, value=key)
+    sheet.cell(row=row, column=value_column, value=general_text(key, value))
 
 
 # how a value appears in the change log: dates as 24.12.1960, the IBAN only with its start and end

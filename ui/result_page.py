@@ -20,11 +20,12 @@ class DateItem(QTableWidgetItem):
         return self.sort_key < other.sort_key
 
 
-# describes what a ResultPage calculates (birthdays or honors)
+# describes what a ResultPage calculates (birthdays or honors); purpose is "birthdays" or "honors" (who counts,
+# Members.counted), gifts are {number: gift} from the settings of the club
 class ResultSpec:
 
     def __init__(self, title, description, numbers, checkbox_text, occasion, file_stem, finder, txt_writer,
-                 ics_writer):
+                 ics_writer, purpose):
         self.title = title
         self.description = description
         self.numbers = numbers
@@ -34,10 +35,13 @@ class ResultSpec:
         self.finder = finder
         self.txt_writer = txt_writer
         self.ics_writer = ics_writer
+        self.purpose = purpose
+        self.gifts = {}
 
 
 class ResultPage(QWidget):
-    COLUMNS = ["Datum", "Anlass", "Name", "Telefon / Mobil"]
+    COLUMNS = ["Datum", "Anlass", "Geschenk/Maßnahme", "Name", "Telefon / Mobil"]
+    GIFT_COLUMN = 2
 
     def __init__(self, spec):
         super().__init__()
@@ -98,6 +102,7 @@ class ResultPage(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setColumnHidden(self.GIFT_COLUMN, True)
         layout.addWidget(self.table, stretch=1)
 
         # export options
@@ -150,13 +155,28 @@ class ResultPage(QWidget):
 
     # the selectable numbers were changed in the settings
     def set_numbers(self, numbers):
+        if list(numbers) == list(self.spec.numbers) and self.checkboxes:
+            return
         unchecked = {number for number, box in zip(self.spec.numbers, self.checkboxes) if not box.isChecked()}
         for checkbox in self.checkboxes:
             self.checkbox_grid.removeWidget(checkbox)
+            checkbox.hide()   # deleteLater takes effect later: until then it would still be drawn
             checkbox.deleteLater()
         self.spec.numbers = list(numbers)
         self.fill_checkboxes(unchecked)
         self.refresh()
+
+    # gifts of the club: shown in the preview and the files (the column only when there are any)
+    def set_gifts(self, gifts):
+        self.spec.gifts = dict(gifts)
+        self.table.setColumnHidden(self.GIFT_COLUMN, not self.spec.gifts)
+        self.refresh()
+
+    # the reminder of the club (settings sheet); a change here is only for this export and is not saved
+    def set_reminder(self, days):
+        self.reminder_spin.blockSignals(True)
+        self.reminder_spin.setValue(days)
+        self.reminder_spin.blockSignals(False)
 
     @staticmethod
     def make_date_edit():
@@ -208,7 +228,7 @@ class ResultPage(QWidget):
         if self.members is None:
             return []
         start, end = self.date_range()
-        return self.spec.finder(self.members.members, self.checked_numbers(), start, end)
+        return self.spec.finder(self.members.counted(self.spec.purpose), self.checked_numbers(), start, end)
 
     def refresh(self):
         entries = self.entries()
@@ -225,8 +245,9 @@ class ResultPage(QWidget):
             contact = " / ".join(value for value in (member.phone_number, member.mobile_phone) if value)
             self.table.setItem(row, 0, DateItem(entry.date))
             self.table.setItem(row, 1, QTableWidgetItem(self.spec.occasion(entry.number)))
-            self.table.setItem(row, 2, QTableWidgetItem(member.full_name()))
-            self.table.setItem(row, 3, QTableWidgetItem(contact))
+            self.table.setItem(row, 2, QTableWidgetItem(self.spec.gifts.get(entry.number, "")))
+            self.table.setItem(row, 3, QTableWidgetItem(member.full_name()))
+            self.table.setItem(row, 4, QTableWidgetItem(contact))
         self.table.setSortingEnabled(True)
         self.table.sortItems(0, Qt.SortOrder.AscendingOrder)
 
@@ -237,13 +258,14 @@ class ResultPage(QWidget):
     # write the result into a file; kind is "txt", "xlsx" or "ics"
     def write(self, kind, path):
         start, end = self.date_range()
-        members, numbers = self.members.members, self.checked_numbers()
-        minimal = self.minimal_check.isChecked()
+        members, numbers = self.members.counted(self.spec.purpose), self.checked_numbers()
+        minimal, gifts = self.minimal_check.isChecked(), self.spec.gifts
         if kind == "txt":
-            return self.spec.txt_writer(members, numbers, start, end, path, minimal=minimal)
+            return self.spec.txt_writer(members, numbers, start, end, path, minimal=minimal, gifts=gifts)
         if kind == "ics":
-            return self.spec.ics_writer(members, numbers, start, end, path, reminder_days=self.reminder_spin.value())
-        return write_entries_into_xlsx(self.entries(), self.spec.occasion, path, minimal=minimal)
+            return self.spec.ics_writer(members, numbers, start, end, path, reminder_days=self.reminder_spin.value(),
+                                        gifts=gifts)
+        return write_entries_into_xlsx(self.entries(), self.spec.occasion, path, minimal=minimal, gifts=gifts)
 
     def save(self, kind):
         name = self.spec.file_stem + "_" + str(self.year) + "." + kind

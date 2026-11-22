@@ -31,6 +31,12 @@ def write_entries_into_ics(entries, summary, description, ics_filename, reminder
     return True
 
 
+# the gift of the occasion (settings of the club) below the text of a calendar entry
+def with_gift(text, gifts, number):
+    gift = (gifts or {}).get(number)
+    return text + "\nGeschenk/Maßnahme: " + gift if gift else text
+
+
 # the reminder shows up at 9 o'clock, the given number of days before the (all-day) event
 def reminder(text, days):
     alarm = Alarm()

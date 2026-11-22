@@ -276,6 +276,15 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   `save(..., ignore_lock=True)` für „trotzdem speichern“ (z. B. verwaiste `~$`-Datei nach Excel-Absturz), die
   Oberfläche dafür kommt in AP 4. Nachprüfen vergleicht die geschriebenen Bytes.
 
+- **AP 3 erledigt (2026-11-22):** `model/club_settings.py` (Lesen, Spalten per Überschrift, ungültige Werte →
+  Datenprüfung mit Name „Blatt „Einstellungen““, Standardwert gilt), `store.changes.update_settings` (Abgleich je
+  Bereich: Anlässe, jede Liste, jede allgemeine Einstellung; Bemerkungen bleiben), `ui/club_settings_dialog.py`
+  (Reiter Anlässe/Auswahllisten/Allgemein + Name fürs Protokoll; unveränderte Standardwerte werden nicht in die Datei
+  geschrieben), `MainWindow.save_change`. Passive zählen je Zweck (`Members.counted`), Geschenk in Vorschau, XLSX
+  (Spalte nach dem Datum), TXT und ICS, nicht im datensparsamen Export. Statistik: „Mitglieder“ + „davon passiv“.
+  Erinnerung der Datei wird beim Laden gesetzt, Änderung im Reiter gilt nur für den Export. Standard der Erinnerung
+  im Einstellungsblatt: 7 Tage (wie bisher in der App).
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

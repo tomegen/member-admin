@@ -26,7 +26,7 @@ class IssuesPage(QWidget):
                                "Fehlende Angaben führen dazu, dass Personen in den Auswertungen fehlen. Bitte in "
                                "Excel korrigieren, speichern und oben auf „Neu einlesen“ klicken."))
 
-        self.only_active = QCheckBox("Nur aktive Mitglieder anzeigen")
+        self.only_active = QCheckBox("Nur Mitglieder anzeigen (ohne Ausgetretene)")
         self.only_active.setChecked(True)
         self.only_active.toggled.connect(self.refresh)
         layout.addWidget(self.only_active)
@@ -65,7 +65,7 @@ class IssuesPage(QWidget):
         for row, issue in enumerate(issues):
             self.table.setItem(row, 0, NumberItem(str(issue.row)))
             self.table.setItem(row, 1, QTableWidgetItem(issue.name))
-            self.table.setItem(row, 2, QTableWidgetItem("aktiv" if issue.active else "nicht gezählt"))
+            self.table.setItem(row, 2, QTableWidgetItem("Mitglied" if issue.active else "nicht gezählt"))
             self.table.setItem(row, 3, QTableWidgetItem(issue.message))
         self.table.setSortingEnabled(True)
         self.table.sortItems(0, Qt.SortOrder.AscendingOrder)

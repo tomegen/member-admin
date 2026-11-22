@@ -46,6 +46,22 @@ def open_book(data):
     return load_workbook(io.BytesIO(data), read_only=True, data_only=True)
 
 
+# value of a cell without creating it: in a book opened for writing, sheet.cell() and iter_rows() add empty cells
+# to the file
+def peek(sheet, row, column):
+    cell = sheet._cells.get((row, column))
+    return None if cell is None else cell.value
+
+
+# the values of the first columns of a sheet as rows of tuples, the same for books opened to read or to write
+def sheet_rows(sheet, columns):
+    if not hasattr(sheet, "_cells"):   # read only
+        return [tuple(row) + (None,) * (columns - len(row))
+                for row in sheet.iter_rows(max_col=columns, values_only=True)]
+    last = max((row for row, _ in sheet._cells), default=0)
+    return [tuple(peek(sheet, row, column) for column in range(1, columns + 1)) for row in range(1, last + 1)]
+
+
 def members_sheet(book):
     return book[schema.MEMBERS_SHEET] if schema.MEMBERS_SHEET in book.sheetnames else book.worksheets[0]
 

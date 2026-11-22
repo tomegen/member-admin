@@ -56,7 +56,7 @@ REMINDER_DAYS = "Erinnerung (Tage vorher)"
 PASSIVE_BIRTHDAYS = "Passive bei Geburtstagen"
 PASSIVE_HONORS = "Passive bei Ehrungen"
 PASSIVE_STATISTICS = "Passive in der Statistik"
-GENERAL_DEFAULTS = [(CLUB_NAME, ""), (DELETE_AFTER, "nie"), (REMINDER_DAYS, 0),
+GENERAL_DEFAULTS = [(CLUB_NAME, ""), (DELETE_AFTER, "nie"), (REMINDER_DAYS, 7),
                     (PASSIVE_BIRTHDAYS, "ja"), (PASSIVE_HONORS, "ja"), (PASSIVE_STATISTICS, "ja")]
 
 # info sheet: key in column A, value in column B

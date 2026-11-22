@@ -2,7 +2,7 @@ import pandas as pd
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from model import schema
-from model.club_file import cell_key, members_sheet, whole_number
+from model.club_file import cell_key, members_sheet, peek, whole_number
 from model.columns import normalize
 
 COLUMNS_BY_HEADING = {normalize(column.heading): column for column in schema.MEMBER_COLUMNS}
@@ -11,12 +11,6 @@ COLUMNS_BY_FIELD = {column.field: column for column in schema.MEMBER_COLUMNS}
 
 def is_empty(value):
     return cell_key(value) == ""
-
-
-# value of a cell without creating it (sheet.cell() would add empty cells to the file)
-def peek(sheet, row, column):
-    cell = sheet._cells.get((row, column))
-    return None if cell is None else cell.value
 
 
 # last row of a sheet with content; prepared rows with only formats or dropdowns do not count

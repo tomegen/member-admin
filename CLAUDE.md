@@ -10,7 +10,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 - Start: Excel wählen (Dialog, Drag & Drop oder „Zuletzt verwendet“); `.xlsx`/`.xls`, erstes Blatt, Kopfzeile = Spaltennamen.
 - **Auswertungsjahr** im Kopf (Standard: ab Oktober das Folgejahr). Es steuert Geburtstage, Ehrungen, „Neue Mitglieder“.
 - Tabs: Übersicht (mit „Demnächst“: nächste 30 Tage) · Geburtstage · Ehrungen · Statistik · Datenprüfung.
-- **Einstellungen** (Knopf im Kopf): Auswahl der Geburtstage/Jubiläen, gespeichert in `QSettings`; `config.ini` liefert nur die Standardwerte.
+- **Einstellungen** (Knopf im Kopf): bei einer **Standarddatei** im Blatt „Einstellungen“ der Datei (Anlässe mit Geschenk, Auswahllisten, Vereinsname, Löschfrist, Erinnerung, ob Passive zählen; `ClubSettingsDialog`, gespeichert über `store`); bei alten Listen Auswahl der Zahlen in `QSettings`. `config.ini` liefert nur die Standardwerte.
 - Geburtstage/Ehrungen: ganzes Jahr oder eigener Zeitraum, Auswahl der runden Zahlen,
   **Vorschau-Tabelle** (sortierbar), Export als TXT, Excel (XLSX) und ICS (Ganztagstermine, stabile UIDs, Erinnerung n Tage vorher),
   Option „Nur Name und Anlass“ (datensparsam, für TXT/XLSX).
@@ -40,6 +40,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `ui/main_window.py` | Hauptfenster, Laden, Jahr, Drag & Drop (`show_error` überschreibbar für Tests) |
 | `ui/result_page.py` | **eine** Seite für Geburtstage und Ehrungen (`ResultSpec`), Vorschau, Speichern |
 | `ui/overview_page.py`, `ui/statistics_page.py`, `ui/issues_page.py`, `ui/welcome_page.py`, `ui/theme.py` | Übersicht, Statistik, Datenprüfung, Startseite, Stil |
+| `model/club_settings.py`, `ui/club_settings_dialog.py` | Einstellungsblatt lesen (`ClubSettings`, `read_settings`, Hinweise bei ungültigen Werten), Dialog dazu; `MainWindow.save_change` = gemeinsamer Speicherablauf (Name fürs Protokoll, „trotzdem speichern“ bei Sperrdatei, neu einlesen) |
 | `ui/settings_dialog.py`, `ui/saving.py` | Einstellungen (Zahlenlisten), gemeinsamer „Speichern unter“-Ablauf |
 | `tests/test_regressions.py`, `tests/test_ui.py`, `tests/test_store.py` | Tests (Logik/Modell; Oberfläche offscreen; Schreiben) |
 | `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/` (Windows: `-Windows-Setup.exe` + `-Windows.zip`, macOS: `-Mac.dmg`; Dateinamen ohne Version) |
