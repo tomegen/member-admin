@@ -335,8 +335,7 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   bzw. `parse_date` umgestellt. Smoke-Test speichert zusätzlich in der importierten Kopie (anlegen, ändern, Sicherung)
   und bricht bei fremden Dateien mit Exit 2 ab statt den Assistenten zu öffnen. Doku: README (neu für Anwender),
   `Release_Notes.md` 0.2.0, `docs/index.html` + `docs/start.png`, `CLAUDE.md` (Festlegungen), `IDEAS.md`.
-  **Offen bis zum Release:** Prüfliste von Hand (oben, Abschnitt 7), danach Merge nach `main` und Release 0.2.0 nur
-  auf Anweisung.
+  **Release 0.2.0 am 2026-11-22** (auf Anweisung von Thomas vor der Prüfliste). Offen: Prüfliste von Hand (Abschnitt 7).
 
 ## 9. Doku nach Umsetzung
 

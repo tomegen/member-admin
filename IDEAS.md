@@ -1,6 +1,6 @@
 # Ideen für das Mitglieder Management Portal
 
-Stand 2026-11-22. Sortiert nach Empfehlung. **Umgesetzt und in Release 0.1.0 (2026-11-17): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24, 26–30.** **Umgesetzt für 0.2 (Branch `feature/standard-format`, noch kein Release): 6, 31–35, 45, Löschfrist** (siehe `PLAN_DATA_STORAGE.md`). Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt); 39 entfällt (Thomas: Ehrungen lassen sich je Jahr neu berechnen).
+Stand 2026-11-22. Sortiert nach Empfehlung. **Umgesetzt und in Release 0.1.0 (2026-11-17): 1, 2, 3, 4 (ohne PLZ/IBAN), 8, 9, 14, 16, 24, 26–30.** **Umgesetzt und in Release 0.2.0 (2026-11-22): 6, 31–35, 45, Löschfrist** (siehe `PLAN_DATA_STORAGE.md`). Nicht umgesetzt: 13 (Urkunden, laut Thomas noch nicht benötigt); 39 entfällt (Thomas: Ehrungen lassen sich je Jahr neu berechnen).
 Ideen 31–49 (2026-11-17) sind nur notiert, **nichts davon umsetzen ohne Freigabe von Thomas**. Aufwand: S = Stunden, M = ein bis wenige Tage, L = Wochenende+.
 „Beleg“ nennt, woran ich die Idee in der echten Mitgliederliste (nur Zähler) oder im Code festmache.
 
@@ -108,6 +108,6 @@ Offene Fragen: Wo liegt die Excel (lokal, USB, OneDrive/Dropbox/Nextcloud)? Wie 
 1. ✅ 24 (Pipeline auf GitHub grün).
 2. ✅ 26–30 (Installer, DMG, feste Links, Download-Seite, Windows-Screenshots). Release 0.1.0 veröffentlicht, Download-Seite live. **Als Nächstes:** Rückmeldungen der Vorstände zur Installation sammeln.
 3. ✅ 1, 2, 3, 8, 9, 14, 16.
-4. ✅ 31–35, 45 (Version 0.2, siehe `PLAN_DATA_STORAGE.md`). **Als Nächstes:** Prüfliste von Hand, dann Release 0.2.0 (nur auf Anweisung). Danach naheliegend: 47 (Mitgliederentwicklung, „Austritt am“ gibt es jetzt), 41 (E-Mail-Verteiler, Feld E-Mail gibt es jetzt), 36.
+4. ✅ 31–35, 45 (Version 0.2, siehe `PLAN_DATA_STORAGE.md`). Release 0.2.0 veröffentlicht (2026-11-22). **Als Nächstes:** Thomas' Test mit echter Liste und Prüfliste von Hand (`PLAN_DATA_STORAGE.md` Abschnitt 7). Danach naheliegend: 47 (Mitgliederentwicklung, „Austritt am“ gibt es jetzt), 41 (E-Mail-Verteiler, Feld E-Mail gibt es jetzt), 36.
 5. 13 (Urkunden): größter Nutzen bei Ehrungen, braucht eine Vorlage vom Verein; zurückgestellt.
 6. Offen und klein: 10/39 (überfällige Ehrungen), 12, 17 (Hilfe), 18, 20, 41.

@@ -1,6 +1,6 @@
 
 # Version 0.2.0
-Release Date: noch nicht veröffentlicht <br/><br>
+Release Date: 22.11.2026 <br/><br>
 
 **Die Excel-Datei wird zur gemeinsamen Mitgliederdatenbank.** Sie bleibt in Excel, Google Tabellen und am Handy
 bearbeitbar und kann in Dropbox, OneDrive/SharePoint, Google Drive oder Nextcloud geteilt werden. <br>
