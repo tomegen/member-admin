@@ -118,6 +118,7 @@ def write_functions_sheet(sheet):
             sheet[letter + str(row)].number_format = "DD.MM.YYYY"
 
 
+# without config the occasions stay empty: then the defaults apply (used when the sheet is rebuilt)
 def write_settings_sheet(sheet, config):
     write_headings(sheet, [
         ("Anlass", 13, True, "Geburtstag oder Jubiläum. Eine Zeile je Anlass, der gefeiert wird."),
@@ -125,8 +126,8 @@ def write_settings_sheet(sheet, config):
         ("Geschenk/Maßnahme", 28, False, "z. B. Präsentkorb, Urkunde, Besuch durch den Vorstand."),
         ("Bemerkung", 24, False, None),
     ])
-    occasions = ([(schema.BIRTHDAY, n) for n in config.birthday_config] +
-                 [(schema.HONOR, n) for n in config.honor_config])
+    occasions = [] if config is None else ([(schema.BIRTHDAY, n) for n in config.birthday_config] +
+                                           [(schema.HONOR, n) for n in config.honor_config])
     for row, (occasion, years) in enumerate(occasions, start=2):
         sheet.cell(row=row, column=1, value=occasion)
         sheet.cell(row=row, column=2, value=years)
@@ -168,13 +169,17 @@ def write_info_sheet(sheet):
     sheet.cell(row=1, column=1).font = Font(bold=True, size=14)
     sheet.column_dimensions["A"].width = 110
     sheet.column_dimensions["B"].width = 40
-    row = len(INSTRUCTIONS) + 2
+    write_info_keys(sheet, len(INSTRUCTIONS) + 2, [schema.SCHEMA_KEY, schema.FILE_ID_KEY, schema.NEXT_NR_KEY])
+
+
+# the keys the app reads in column A, their values in column B (a new file id); starting at the given row
+def write_info_keys(sheet, row, keys):
     nr_column = quote_sheetname(schema.MEMBERS_SHEET) + "!A:A"
-    for offset, (key, value) in enumerate([(schema.SCHEMA_KEY, schema.SCHEMA_VERSION),
-                                           (schema.FILE_ID_KEY, str(uuid.uuid4())),
-                                           (schema.NEXT_NR_KEY, "=MAX(" + nr_column + ")+1")]):
+    values = {schema.SCHEMA_KEY: schema.SCHEMA_VERSION, schema.FILE_ID_KEY: str(uuid.uuid4()),
+              schema.NEXT_NR_KEY: "=MAX(" + nr_column + ")+1"}
+    for offset, key in enumerate(keys):
         sheet.cell(row=row + offset, column=1, value=key).font = Font(bold=True)
-        sheet.cell(row=row + offset, column=2, value=value).alignment = Alignment(horizontal="left")
+        sheet.cell(row=row + offset, column=2, value=values[key]).alignment = Alignment(horizontal="left")
 
 
 # an empty member list in the standard format: all sheets, dropdowns and checks for the input, a new file id;

@@ -270,6 +270,12 @@ Gesamt grob: mehrere Wochenenden. Nach jedem AP laufen die Tests, und `graphify 
   Import-Assistenten übergibt. `example_file.xlsx` ist noch im alten Format (AP 8). Offen für AP 3: Datenprüfung
   zeigt „aktiv“ auch für passive Mitglieder, Statistik-Zeile heißt noch „Aktive Mitglieder“.
 
+- **AP 2 erledigt (2026-11-22):** Paket `store/` (siehe Abschnitt 2). Abweichungen/Ergänzungen zum Plan:
+  Fehler liegen in `store/errors.py`; Zellen werden ohne Anlegen gelesen (`store/sheet.peek`), damit die Datei nicht
+  wächst; fehlen Pflichtspalten in der frischen Datei, bricht das Speichern ab (keine leere Ersatzspalte);
+  `save(..., ignore_lock=True)` für „trotzdem speichern“ (z. B. verwaiste `~$`-Datei nach Excel-Absturz), die
+  Oberfläche dafür kommt in AP 4. Nachprüfen vergleicht die geschriebenen Bytes.
+
 ## 9. Doku nach Umsetzung
 
 `CLAUDE.md` (Festlegungen: App schreibt, Standardformat, Einstellungen in der Datei, Transaktion, Löschablauf;

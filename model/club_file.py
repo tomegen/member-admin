@@ -1,4 +1,8 @@
+import datetime
+import hashlib
+import io
 import numbers
+from collections import namedtuple
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -22,9 +26,24 @@ class MissingColumns(Exception):
         self.found = found
 
 
+# state of the file when it was read: hash of its bytes and the cell keys (see cell_key) of each member by nr.
+# Saving compares with it to keep the changes that others made in the meantime (store/transaction.py)
+Snapshot = namedtuple("Snapshot", "hash rows")
+
+
+# the file is read once as bytes: hash and content are the same state, and no file handle stays open
+def read_bytes(path):
+    with open(path, "rb") as file:
+        return file.read()
+
+
+def file_hash(data):
+    return hashlib.sha256(data).hexdigest()
+
+
 # the standard file is read with openpyxl: it gives the real excel row numbers and is the base for writing
-def open_book(path):
-    return load_workbook(path, read_only=True, data_only=True)
+def open_book(data):
+    return load_workbook(io.BytesIO(data), read_only=True, data_only=True)
 
 
 def members_sheet(book):
@@ -53,13 +72,19 @@ def is_standard(book):
 
 def is_standard_file(path):
     try:
-        book = open_book(path)
+        book = open_book(read_bytes(path))
     except Exception:   # e.g. .xls or no excel file at all: the old reader reports it
         return False
-    try:
-        return is_standard(book)
-    finally:
-        book.close()   # read only books keep the file open (on windows nobody else could save it)
+    return is_standard(book)
+
+
+# a cell value in a form that compares the same however it was written: dates as 2026-11-22, 5.0 as 5, text stripped
+def cell_key(value):
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return ""
+    if isinstance(value, datetime.date):
+        return pd.Timestamp(value).date().isoformat()
+    return to_text(value)
 
 
 # a value of a dropdown, case does not matter; a first letter is fine if it is unique ("m" = männlich, "a" is not)
@@ -79,7 +104,8 @@ def whole_number(value):
     return int(text) if text.isdigit() and int(text) > 0 else None
 
 
-# reads the sheet "Mitglieder": ([(excel row, Member)], [Issue]); the columns are found by their heading
+# reads the sheet "Mitglieder": ([(excel row, Member)], [Issue], {nr: {field: cell key}});
+# the columns are found by their heading
 def read_members(book, today):
     sheet = members_sheet(book)
     found = {normalize(heading): index for index, heading in reversed(list(enumerate(headings(sheet))))}
@@ -90,7 +116,7 @@ def read_members(book, today):
     if missing:
         raise MissingColumns(missing, headings(sheet))
 
-    rows, issues, numbers_seen = [], [], {}
+    rows, issues, numbers_seen, keys = [], [], {}, {}
     for row, cells in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
         values = {field: cells[index] if index < len(cells) else None for field, index in positions.items()}
         if all(to_text(value) == "" for value in values.values()):
@@ -118,7 +144,9 @@ def read_members(book, today):
                         note=to_text(values.get("note")))
         issues += row_issues(row, member, values, numbers_seen, today)
         rows.append((row, member))
-    return rows, issues
+        if member.nr is not None and numbers_seen.get(member.nr) == row:
+            keys[member.nr] = {field: cell_key(value) for field, value in values.items()}
+    return rows, issues, keys
 
 
 # findings of one row of the standard file; numbers_seen collects nr -> first excel row

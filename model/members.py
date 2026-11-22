@@ -33,27 +33,31 @@ class Members:
         self.members = []
         self.issues = []
         self.filename = filename
-        self.standard = club_file.is_standard_file(filename)
+        self.snapshot = None   # only for the standard file, which the app can change
+        try:
+            data = club_file.read_bytes(filename)
+        except OSError as e:
+            raise MemberListError(READ_ERROR + str(e))
+        try:
+            book = club_file.open_book(data)
+        except Exception:   # e.g. .xls: the old reader reads it or reports the problem
+            book = None
+        self.standard = book is not None and club_file.is_standard(book)
         if self.standard:
-            rows = self.read_standard(today)
+            rows = self.read_standard(book, data, today)
             self.issues += plausibility_issues(rows, today, since_label="Eintritt")
         else:
             rows = self.read_old_list(config)
             self.issues += plausibility_issues(rows, today)
         self.members = [member for _, member in rows]
 
-    def read_standard(self, today):
+    def read_standard(self, book, data, today):
         try:
-            book = club_file.open_book(self.filename)
-        except Exception as e:
-            raise MemberListError(READ_ERROR + str(e))
-        try:
-            rows, issues = club_file.read_members(book, today)
+            rows, issues, keys = club_file.read_members(book, today)
         except club_file.MissingColumns as e:
             raise missing_columns_error(e.missing, e.found)
-        finally:
-            book.close()
         self.issues += issues
+        self.snapshot = club_file.Snapshot(club_file.file_hash(data), keys)
         return rows
 
     # an old list: first sheet, heading in row 1, "Mitglied" is 1 or 0

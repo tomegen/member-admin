@@ -30,6 +30,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `config.ini` | Standardwerte: Auswahllisten (Geburtstage/Ehrungen) + bevorzugte Excel-Spaltennamen |
 | `model/members.py` | Excel → `Member`-Liste, `Issue`-Liste (Datenprüfung), `parse_date`, `MemberListError`, Zähler |
 | `model/schema.py`, `model/club_file.py`, `model/values.py` | **Standardformat** (Blätter, Spalten, Dropdown-Werte, Schema-Version), Lesen der Standarddatei mit openpyxl (echte Excel-Zeilen, `is_standard_file`), `parse_date`/`to_text`. Plan: `PLAN_DATA_STORAGE.md` |
+| `store/transaction.py`, `store/changes.py`, `store/repair.py`, `store/backups.py`, `store/sheet.py`, `store/errors.py` | **Sicheres Schreiben**: `save(path, change, editor)` = Sperrdatei prüfen, frisch einlesen, Änderung (`update_member` mit Abgleich je Feld, `add_member`, `assign_numbers`), Selbstreparatur, Protokoll, Sicherung in `Sicherungen/`, atomar ersetzen, nachprüfen. Fehler: `SaveError`, `FileLocked`, `Conflict`, `Duplicate` |
 | `model/columns.py`, `model/checks.py`, `model/issue.py` | Spaltenerkennung (`FIELDS`, `detect_columns`), Plausibilitätsprüfungen (`age_on`), `Issue` |
 | `model/member.py`, `model/entry.py` | Datenklassen (`Member`, `Entry` = Treffer mit Zahl, Mitglied, Datum) |
 | `logic/date_utils.py` | `shift_years` (29.02. → 28.02. in Nicht-Schaltjahren) |
@@ -40,7 +41,7 @@ auch ohne die App, z. B. am Smartphone) — die App liest sie nur, schreibt nie 
 | `ui/result_page.py` | **eine** Seite für Geburtstage und Ehrungen (`ResultSpec`), Vorschau, Speichern |
 | `ui/overview_page.py`, `ui/statistics_page.py`, `ui/issues_page.py`, `ui/welcome_page.py`, `ui/theme.py` | Übersicht, Statistik, Datenprüfung, Startseite, Stil |
 | `ui/settings_dialog.py`, `ui/saving.py` | Einstellungen (Zahlenlisten), gemeinsamer „Speichern unter“-Ablauf |
-| `tests/test_regressions.py`, `tests/test_ui.py` | Tests (Logik/Modell; Oberfläche offscreen) |
+| `tests/test_regressions.py`, `tests/test_ui.py`, `tests/test_store.py` | Tests (Logik/Modell; Oberfläche offscreen; Schreiben) |
 | `build.py`, `.github/workflows/release.yml` | PyInstaller → `release/` (Windows: `-Windows-Setup.exe` + `-Windows.zip`, macOS: `-Mac.dmg`; Dateinamen ohne Version) |
 | `installer/windows.iss` | Inno-Setup-Skript (Installation pro Benutzer ohne Admin, `AppId` nie ändern) |
 | `docs/` | Download-Seite für GitHub Pages (`index.html`, `start.png`, `qr-download.svg`), verlinkt `releases/latest/download/…` |
@@ -53,7 +54,7 @@ Ehrung n analog mit „Mitglied seit“.
 - Stack: Python 3.12, **PySide6 (Qt)** — bewusst statt Tk/customtkinter (Tk fehlt in Homebrew-/System-Python, hässliche Datumsfelder, kein Offscreen-Test).
 - Setup: `uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements-dev.txt`
 - Start: `.venv/bin/python mitgliederverwaltung.py [excel]`
-- Tests: `.venv/bin/python tests/test_regressions.py` und `.venv/bin/python tests/test_ui.py`
+- Tests: `.venv/bin/python tests/test_regressions.py`, `.venv/bin/python tests/test_ui.py` und `.venv/bin/python tests/test_store.py`
   (Oberfläche läuft mit `QT_QPA_PLATFORM=offscreen`, auch für Screenshots per `widget.grab().save(...)`).
 - Build lokal: `.venv/bin/python build.py <version>` → `release/` (ignoriert; Mac-DMG; Windows-Installer nur mit Inno Setup 6). Danach gepackte App prüfen:
   `QT_QPA_PLATFORM=offscreen release/Mitgliederverwaltung.app/Contents/MacOS/Mitgliederverwaltung --smoke-test example_file.xlsx`
