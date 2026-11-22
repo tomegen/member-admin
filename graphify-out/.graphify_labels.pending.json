@@ -1,9 +1,9 @@
 {
   "0": "with",
-  "1": "club_file.py",
+  "1": "test_store.py",
   "2": "birthday_calculation.py",
   "3": "main_window.py",
-  "4": "os",
+  "4": "mitgliederverwaltung.py",
   "5": "MainWindow",
   "6": "Member",
   "7": "Release_Notes.md",
@@ -19,11 +19,13 @@
   "17": "ClubSettings",
   "18": "build",
   "19": "strategy",
+  "20": "CheckPage",
   "21": ".write_rows",
   "22": "MemberEditingUiTest",
   "23": "ResultPage",
+  "24": "build.py",
   "25": "QWidget",
-  "26": "mitgliederverwaltung.py",
-  "27": "to_text",
+  "26": "MemberSheet",
+  "27": "club_file.py",
   "32": "Exception"
 }

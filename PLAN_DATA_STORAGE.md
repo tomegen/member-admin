@@ -35,7 +35,7 @@ Import, desto mehr Vereine steigen um, deshalb hat er hohe Priorität.
 | Passive Mitglieder | Pro Verein einstellbar, ob sie bei Geburtstagen, Ehrungen und in der Statistik zählen (Standard: ja; Statistik weist aktiv/passiv getrennt aus). |
 | Vornamenliste | Klein anfangen (selbst zusammengestellt, häufige Vornamen), mit der Zeit ergänzen. |
 | Änderungsprotokoll | Vorerst unbegrenzt. |
-| Eintritt unbekannt | Bleibt Pflicht; im Import per Sammel-Ausfüllen nachtragen. |
+| Eintritt unbekannt | ~~Bleibt Pflicht; im Import per Sammel-Ausfüllen nachtragen.~~ **Geändert 2026-11-22 (Test mit echter Liste):** Geburtstag, Eintritt und Austrittsdatum dürfen beim Import leer bleiben (orange, nicht blockierend) und erscheinen in der Datenprüfung; neue Mitglieder/Austritte in der App brauchen sie weiter. Ohne Austrittsdatum greift die Löschfrist nicht. |
 
 ## 1. Dateiformat (Schema-Version 1)
 

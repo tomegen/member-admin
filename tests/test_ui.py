@@ -676,6 +676,32 @@ class ImportUiTest(unittest.TestCase):
                           (3, "Kim", "männlich", pd.Timestamp("2000-01-01"))])
         self.assertEqual(members[2].birthday, pd.Timestamp("1980-03-03"))
 
+    def test_unknown_dates_stay_empty_and_appear_in_the_data_check(self):
+        from openpyxl import Workbook
+        book = Workbook()
+        for row in [["Name", "Vorname", "Geschlecht", "Geburtstag", "Eintritt", "Mitglied"],
+                    ["Muster", "Max", "m", None, "2002-05-05", 1],          # birthday unknown
+                    ["Beispiel", "Eva", "w", "1970-02-13", None, 1],        # entry unknown
+                    ["Probe", "Udo", "m", "1960-01-01", "1990-01-01", 0]]:  # left, date unknown
+            book.active.append(row)
+        path = os.path.join(self.tmp.name, "alt.xlsx")
+        book.save(path)
+
+        def run(wizard):
+            check = self.go_to_check_page(wizard)
+            self.assertTrue(check.isComplete())                     # nothing has to be filled in
+            self.assertIn("3 mit unbekanntem Datum", check.summary.text())
+            wizard.next()
+            wizard.accept()
+            return wizard.result()
+
+        with mock.patch.object(ImportWizard, "exec", run):
+            self.assertTrue(self.window.load_file(path))
+        found = [(issue.name, issue.active, issue.message.split(",")[0]) for issue in self.window.members.issues]
+        self.assertEqual(found, [("Max Muster", True, "Geburtstag fehlt"), ("Eva Beispiel", True, "Eintritt fehlt"),
+                                 ("Udo Probe", False, "Status ist „ausgetreten“")])
+        self.assertEqual(self.window.tabs.tabText(TAB_ISSUES), "Datenprüfung (2)")
+
     def test_rows_can_be_left_out_and_cancel_changes_nothing(self):
         old = self.copy(OLD_LIST, "alt.xlsx")
         with mock.patch.object(ImportWizard, "exec", lambda wizard: 0):

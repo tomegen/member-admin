@@ -128,6 +128,11 @@ class MappingTest(ImportTest):
                          [("01234", "Musterstadt"), ("", "Musterstadt")])
         self.assertEqual([gender_of_first_name(name) for name in ("Jürgen", "Anna-Lena", "Hans Peter", "Kim")],
                          ["männlich", "weiblich", "männlich", ""])
+        # added from a real club list (genders as told by the club)
+        self.assertEqual({gender_of_first_name(name) for name in ("Xaver", "Dimitrios", "Constantin", "André", "Robin")},
+                         {"männlich"})
+        self.assertEqual({gender_of_first_name(name) for name in ("Leonie", "Marleen", "Sofie", "Maxima", "Annika")},
+                         {"weiblich"})
 
 
 class ConvertTest(ImportTest):
@@ -147,11 +152,20 @@ class ConvertTest(ImportTest):
                          ("männlich", pd.Timestamp("1977-08-16"), "aktiv", "Info: zahlt bar"))
         self.assertEqual((eva.values["gender"], eva.estimated, eva.values["status"]),
                          ("weiblich", {"gender"}, "ausgetreten"))
-        self.assertEqual([problem for _, problem in eva.problems()], ["Eintritt fehlt"])
+        self.assertEqual((eva.problems(), eva.gaps()), ([], [("member_since", "Eintritt fehlt – kann später ergänzt werden")]))
         self.assertEqual((kim.values["gender"], kim.estimated), ("männlich", {"gender"}))   # majority of the list
-        self.assertEqual(kim.problems(), [("birthday", "Geburtstag ist nicht lesbar: irgendwann")])
+        self.assertEqual((kim.problems(), kim.hints()), ([], ["Geburtstag nicht lesbar: irgendwann – bleibt leer"]))
         self.assertEqual(kim.values["status"], "aktiv")                                     # empty cell
         self.assertEqual((udo.values["status"], udo.problems()), ("passiv", []))
+
+    def test_unknown_exit_date_does_not_block_but_names_and_status_do(self):
+        path = self.xlsx([["Name", "Vorname", "Geschlecht", "Geburtstag", "Eintritt", "Aktiv"],
+                          ["Muster", "Max", "m", None, None, "0"],
+                          [None, "Eva", "w", "13.02.1970", "2000-01-01", "weg"]])
+        max_, eva = self.rows(path)
+        self.assertEqual(max_.problems(), [])
+        self.assertEqual([field for field, _ in max_.gaps()], ["birthday", "member_since", "exit_date"])
+        self.assertEqual([field for field, _ in eva.problems()], ["last_name", "status"])
 
     def test_without_status_column_the_exit_date_decides(self):
         path = self.xlsx([["Name", "Vorname", "Geburtstag", "Eintritt", "Austritt"],

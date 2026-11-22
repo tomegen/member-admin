@@ -93,7 +93,7 @@ Ehrung n analog mit „Eintritt“.
 - Die **Nr** ist die stabile ID: vergibt die App, nie wieder verwendet (auch nicht nach Löschen); Zeilen werden per Nr gefunden.
 - Dialoge speichern **nur geänderte Felder** (unlesbare Altwerte bleiben); leere Werte aus Importen/Abgleichen löschen nie etwas.
 - Dropdowns mit Vereinslisten über **definierte Namen** (`Abteilungen`, …), nicht über Blattverweise (würde openpyxl verwerfen); Fehlerstil „warning“.
-- Import: Original bleibt unverändert; Geschlecht wird nur geschätzt **und** muss bestätigt werden; Nr der alten Liste bleiben, wenn gültig und eindeutig. Abgleich per Nr nur, wenn auch der Name passt.
+- Import: Original bleibt unverändert; Geschlecht wird nur geschätzt **und** muss bestätigt werden; Nr der alten Liste bleiben, wenn gültig und eindeutig. Abgleich per Nr nur, wenn auch der Name passt. **Unbekannte Daten** (Geburtstag, Eintritt, Austritt am) blockieren den Import nicht (`importer.mapping.MAY_STAY_EMPTY`, `ImportRow.gaps`), sondern landen leer in der Datei und in der Datenprüfung (Entscheidung Thomas 2026-11-22); im Mitglied-Dialog bleiben sie für neue Mitglieder/Austritte Pflicht.
 - TXT: UTF-8, `newline=""` (sonst `\r\r\n` unter Windows). Keine Personendaten in `print`/Logs.
 - ICS: Ganztagstermine, UID aus Name+Datum+Zahl (erneuter Import erzeugt keine Dubletten; Ehrungen mit Präfix `honor|`). Erinnerung = 9 Uhr, n Tage vorher.
 - Keine IBAN-Prüfung: in der echten Liste enthält die Spalte „IBAN“ reine Zahlen (Prüfziffer würde fast jede Zeile melden).
@@ -109,6 +109,7 @@ Ehrung n analog mit „Eintritt“.
   Download-Seite live: https://tomegen.github.io/member-admin/ (GitHub Pages aus `main` / `/docs`); `releases/latest/download/…`-Links geprüft (HTTP 200).
   Noch nicht von Hand auf einem echten Windows-PC installiert; Windows-Screenshots aus CI sehen sauber aus (Tabellenköpfe etwas kleiner als auf dem Mac).
 - Windows lokal testen (Docker/VM): **laut Thomas nicht nötig** (Mac-Docker kann keine Windows-Container); Windows-Prüfung über CI.
+- **Release 0.2.1 (2026-11-22):** unbekannte Daten blockieren den Import nicht mehr, Vornamenliste erweitert (Test mit echter Liste).
 - **Release 0.2.0 (2026-11-22)** auf Wunsch von Thomas **vor** der Prüfliste von Hand veröffentlicht (Standardformat, Pflege, Import, Abgleich, Löschfrist; AP 1–8 in `PLAN_DATA_STORAGE.md`). Thomas testet danach die offizielle Mac-Version mit einer echten Liste. Prüfliste (Excel Win/Mac/mobil, Google Tabellen, LibreOffice, echte Konfliktkopie, Windows-PC) aus `PLAN_DATA_STORAGE.md` Abschnitt 7 ist **noch offen**; Fehler daraus → 0.2.x.
 - Dateien je Mitglied (`IDEAS.md` 36) und 37–49 sind **nur notiert** → nur nach Freigabe.
 - Projektordner liegt seit 2026-11-22 unter `~/Documents/private/Programmieren/projects/member-admin` (vorher `…/private/Documents/Programmieren/…`).

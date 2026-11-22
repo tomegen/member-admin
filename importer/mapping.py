@@ -11,6 +11,8 @@ from model.values import parse_date, to_text
 
 COLUMNS = {column.field: column for column in schema.MEMBER_COLUMNS}
 MANDATORY = [column.field for column in schema.MEMBER_COLUMNS if column.mandatory]
+# dates that are often unknown in old lists: they may stay empty, the data check shows them until they are added
+MAY_STAY_EMPTY = ["birthday", "member_since"]
 HEADER_SEARCH = 10   # the heading is searched in the first rows (lists often start with a title)
 
 # targets of a column besides the fields of the standard
@@ -189,18 +191,32 @@ class ImportRow:
     def problems(self):
         found = []
         for field in MANDATORY:
+            if field in MAY_STAY_EMPTY:
+                continue
             if field in self.unreadable:
                 found.append((field, COLUMNS[field].heading + " ist nicht lesbar: " + self.unreadable[field]))
-            elif not self.values.get(field) or (COLUMNS[field].kind == "date" and pd.isna(self.values[field])):
+            elif is_missing(self.values.get(field)):
                 found.append((field, COLUMNS[field].heading + " fehlt"))
-        if self.values.get("status") == schema.LEFT and is_missing(self.values.get("exit_date")):
-            found.append(("exit_date", "Austritt am fehlt (Status ausgetreten)"))
         return found
 
-    # unreadable optional values are left out: shown as a hint, but they do not block
+    # gaps that do not block: unknown dates stay empty (and appear in the data check), unreadable optional values
+    # are left out: [(field, message)]
+    def gaps(self):
+        found = []
+        for field in MAY_STAY_EMPTY + ["exit_date"]:
+            heading = COLUMNS[field].heading
+            if field in self.unreadable:
+                found.append((field, heading + " nicht lesbar: " + self.unreadable[field] + " – bleibt leer"))
+            elif field != "exit_date" and is_missing(self.values.get(field)):
+                found.append((field, heading + " fehlt – kann später ergänzt werden"))
+            elif field == "exit_date" and self.values.get("status") == schema.LEFT and is_missing(self.values.get(field)):
+                found.append((field, "Austritt am unbekannt"))
+        found += [(field, COLUMNS[field].heading + " nicht lesbar: " + text) for field, text in self.unreadable.items()
+                  if field not in MAY_STAY_EMPTY + ["exit_date"] + MANDATORY]
+        return found
+
     def hints(self):
-        return [COLUMNS[field].heading + " nicht lesbar: " + text for field, text in self.unreadable.items()
-                if field not in MANDATORY]
+        return [message for _, message in self.gaps()]
 
 
 def is_missing(value):

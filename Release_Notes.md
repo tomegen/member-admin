@@ -1,4 +1,12 @@
 
+# Version 0.2.1
+Release Date: 22.11.2026 <br/><br>
+
+Import: Unbekannte Geburtstage, Eintrittsdaten und Austrittsdaten blockieren die Übernahme nicht mehr. Sie bleiben
+leer (im Assistenten orange markiert) und stehen danach in der Datenprüfung, bis sie ergänzt sind. Neue Mitglieder
+und neue Austritte in der App brauchen die Daten weiterhin. <br>
+Import: Mehr Vornamen werden beim Schätzen des Geschlechts erkannt (z. B. Xaver, Kilian, Leonie, Marleen). <br><br>
+
 # Version 0.2.0
 Release Date: 22.11.2026 <br/><br>
 

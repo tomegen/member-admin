@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFileDia
                                QHBoxLayout, QHeaderView, QInputDialog, QLabel, QLineEdit, QPushButton, QSpinBox,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWizard, QWizardPage)
 
-from importer.mapping import (COLUMNS, NAME_BOTH, TARGETS, Table, convert, distinct_values, guess_header_row,
-                              suggest_columns, suggest_value)
+from importer.mapping import (COLUMNS, MAY_STAY_EMPTY, NAME_BOTH, TARGETS, Table, convert, distinct_values,
+                              guess_header_row, suggest_columns, suggest_value)
 from importer.reader import DELIMITER_NAMES, ENCODINGS, read_source
 from importer.writer import write_standard_file
 from logic.merge import FileIndex
@@ -18,7 +18,7 @@ from model.club_file import choice
 from model.values import parse_date, to_text
 from ui.theme import muted
 
-RED, YELLOW = QColor("#fecaca"), QColor("#fef08a")
+RED, YELLOW, ORANGE = QColor("#fecaca"), QColor("#fef08a"), QColor("#fed7aa")
 ENCODING_NAMES = {"utf-8-sig": "UTF-8", "cp1252": "Windows (ANSI)"}
 CHECK_FIELDS = ["last_name", "first_name", "gender", "birthday", "member_since", "status", "exit_date"]
 ESTIMATE = "(schätzen)"
@@ -319,7 +319,8 @@ class CheckPage(QWizardPage):
         super().__init__()
         self.setTitle("4. Prüfen und ergänzen")
         self.setSubTitle("Rot: fehlt oder ist nicht lesbar – bitte ergänzen (Doppelklick) oder die Zeile abwählen. "
-                         "Gelb: von der App geschätzt – bitte prüfen und bestätigen.")
+                         "Gelb: von der App geschätzt – bitte bestätigen. Orange: unbekanntes Datum, bleibt leer und "
+                         "steht danach in der Datenprüfung, bis Sie es ergänzen.")
         layout = QVBoxLayout(self)
         self.summary = QLabel()
         layout.addWidget(self.summary)
@@ -371,6 +372,7 @@ class CheckPage(QWizardPage):
         wizard = self.wizard()
         import_row = wizard.rows[index]
         problems = dict(wizard.blocking(import_row))
+        gaps = dict(import_row.gaps()) if wizard.match(import_row) is None else {}
         for offset, field in enumerate(CHECK_FIELDS, start=2):
             item = QTableWidgetItem(self.text(import_row, field))
             if field in problems:
@@ -378,6 +380,9 @@ class CheckPage(QWizardPage):
             elif field in wizard.unconfirmed(import_row):
                 item.setBackground(QBrush(YELLOW))
                 item.setToolTip("geschätzt")
+            elif field in gaps:
+                item.setBackground(QBrush(ORANGE))
+                item.setToolTip(gaps[field])
             self.table.setItem(index, offset, item)
         member = wizard.match(import_row)
         found = ["in der Mitgliederliste: Nr " + str(member.nr)] if member is not None else []
@@ -476,6 +481,10 @@ class CheckPage(QWizardPage):
             parts.append(str(left_out) + " abgewählt")
         if problems:
             parts.append(str(problems) + " mit fehlenden oder unlesbaren Angaben (rot)")
+        gaps = sum(1 for row in self.wizard().rows if row.include and self.wizard().match(row) is None and
+                   any(field in MAY_STAY_EMPTY + ["exit_date"] for field, _ in row.gaps()))
+        if gaps:
+            parts.append(str(gaps) + " mit unbekanntem Datum (orange, bleibt leer)")
         if estimated:
             parts.append(str(estimated) + " mit geschätztem Geschlecht (gelb)")
         self.summary.setText(", ".join(parts) + ".")

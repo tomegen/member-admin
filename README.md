@@ -74,7 +74,10 @@ Jede Liste, die nicht im Format des Programms ist (`.xlsx`, `.xls`, `.csv`, z. B
 öffnet den **Import-Assistenten**: Das Programm findet die Überschriften (auch unter einer Titelzeile), schlägt vor,
 welche Spalte zu welchem Feld gehört, trennt „Müller, Hans“ und „12345 Musterstadt“ und übersetzt Einträge wie
 „x“/„ja“/„0“ oder „Herr“/„Frau“. Fehlende Angaben tragen Sie im Assistenten nach, auch für viele Zeilen auf einmal.
-Fehlt das Geschlecht, schätzt das Programm es aus dem Vornamen – Sie bestätigen das.
+Fehlt das Geschlecht, schätzt das Programm es aus dem Vornamen – Sie bestätigen das. **Unbekannte Daten**
+(Geburtstag, Eintritt, Austrittsdatum) dürfen leer bleiben: Die Datenprüfung zeigt sie, bis Sie sie ergänzen. Wer
+keinen Geburtstag hat, fehlt nur bei den Geburtstagen und in den Altersgruppen; ohne Eintritt fehlt er bei den
+Ehrungen; ohne Austrittsdatum greift für ihn die Löschfrist nicht (Löschen von Hand geht).
 
 Später kommen neue Daten dazu (z. B. ein Export des Verbands oder eine Liste mit E-Mail-Adressen)? Im Tab
 **Mitglieder → Weitere … → „Liste abgleichen“**: Das Programm zeigt neue Personen und jede Änderung einzeln, Sie
